@@ -1,0 +1,85 @@
+# Composer
+/vendor/
+composer.lock
+
+# Tests
+/phpunit.result.cache
+.phpunit.result.cache
+build/
+
+# PHP
+*.cache
+*.log
+*.tmp
+*.min
+*.bak
+
+# IDE and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js (if used for development)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Code Coverage
+coverage/
+clover.xml
+coverage.xml
+*.coverage
+
+# Cache and Temporary Files
+.cache/
+tmp/
+temp/
+
+# Documentation build
+docs/build/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Backup files
+*.orig
+*.rej
+
+# Custom vendor config
+config/
+data/
+
+# Debug dumps
+*.dmp
+
+# PHPDoc cache
+.phpdoc/
+
+# Swagger/OpenAPI cache
+.cache/swagger/
+
+# Packagist deployment
+.packagist
+
+# Git
+.git/
+*.patch
+*.diff
+
+# Changelog
+CHANGELOG.md
