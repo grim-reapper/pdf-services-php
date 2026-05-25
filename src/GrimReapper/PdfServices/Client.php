@@ -29,6 +29,7 @@ use GrimReapper\Contracts\PdfServicesInterface;
 class Client implements PdfServicesInterface
 {
     private PdfServicesConfig $config;
+    private array $services = [];
 
     /**
      * Create a new PDF Services client
@@ -41,13 +42,28 @@ class Client implements PdfServicesInterface
     }
 
     /**
+     * Get a service instance (lazy loaded)
+     *
+     * @param string $class The service class name
+     * @return mixed The service instance
+     */
+    private function getService(string $class): mixed
+    {
+        if (!isset($this->services[$class])) {
+            $this->services[$class] = new $class($this->config);
+        }
+
+        return $this->services[$class];
+    }
+
+    /**
      * Get the PDF creation service
      *
      * @return PdfCreationService
      */
     public function createPdf(): PdfCreationService
     {
-        return new PdfCreationService($this->config);
+        return $this->getService(PdfCreationService::class);
     }
 
     /**
@@ -57,7 +73,7 @@ class Client implements PdfServicesInterface
      */
     public function convert(): PdfConversionService
     {
-        return new PdfConversionService($this->config);
+        return $this->getService(PdfConversionService::class);
     }
 
     /**
@@ -67,7 +83,7 @@ class Client implements PdfServicesInterface
      */
     public function merge(): PdfMergeService
     {
-        return new PdfMergeService($this->config);
+        return $this->getService(PdfMergeService::class);
     }
 
     /**
@@ -77,7 +93,7 @@ class Client implements PdfServicesInterface
      */
     public function split(): PdfSplitService
     {
-        return new PdfSplitService($this->config);
+        return $this->getService(PdfSplitService::class);
     }
 
     /**
@@ -87,7 +103,7 @@ class Client implements PdfServicesInterface
      */
     public function ocr(): OcrService
     {
-        return new OcrService($this->config);
+        return $this->getService(OcrService::class);
     }
 
     /**
@@ -97,7 +113,7 @@ class Client implements PdfServicesInterface
      */
     public function compress(): CompressionService
     {
-        return new CompressionService($this->config);
+        return $this->getService(CompressionService::class);
     }
 
     /**
@@ -107,7 +123,7 @@ class Client implements PdfServicesInterface
      */
     public function secure(): SecurityService
     {
-        return new SecurityService($this->config);
+        return $this->getService(SecurityService::class);
     }
 
     /**
@@ -117,7 +133,7 @@ class Client implements PdfServicesInterface
      */
     public function annotate(): AnnotationService
     {
-        return new AnnotationService($this->config);
+        return $this->getService(AnnotationService::class);
     }
 
     /**
@@ -127,7 +143,7 @@ class Client implements PdfServicesInterface
      */
     public function extract(): FormService
     {
-        return new FormService($this->config);
+        return $this->getService(FormService::class);
     }
 
     /**
@@ -137,7 +153,7 @@ class Client implements PdfServicesInterface
      */
     public function metadata(): MetadataService
     {
-        return new MetadataService($this->config);
+        return $this->getService(MetadataService::class);
     }
 
     /**
@@ -147,7 +163,7 @@ class Client implements PdfServicesInterface
      */
     public function signature(): SignatureService
     {
-        return new SignatureService($this->config);
+        return $this->getService(SignatureService::class);
     }
 
     /**
@@ -157,7 +173,7 @@ class Client implements PdfServicesInterface
      */
     public function compare(): ComparisonService
     {
-        return new ComparisonService($this->config);
+        return $this->getService(ComparisonService::class);
     }
 
     /**
@@ -167,7 +183,7 @@ class Client implements PdfServicesInterface
      */
     public function batch(): BatchProcessorService
     {
-        return new BatchProcessorService($this->config);
+        return $this->getService(BatchProcessorService::class);
     }
 
     /**

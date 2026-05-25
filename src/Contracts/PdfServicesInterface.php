@@ -5,6 +5,18 @@ declare(strict_types=1);
 namespace GrimReapper\Contracts;
 
 use GrimReapper\PdfServices\Config\PdfServicesConfig;
+use GrimReapper\PdfServices\Services\PdfCreationService;
+use GrimReapper\PdfServices\Services\PdfConversionService;
+use GrimReapper\PdfServices\Services\PdfMergeService;
+use GrimReapper\PdfServices\Services\PdfSplitService;
+use GrimReapper\PdfServices\Services\OcrService;
+use GrimReapper\PdfServices\Services\CompressionService;
+use GrimReapper\PdfServices\Services\SecurityService;
+use GrimReapper\PdfServices\Services\AnnotationService;
+use GrimReapper\PdfServices\Services\FormService;
+use GrimReapper\PdfServices\Services\MetadataService;
+use GrimReapper\PdfServices\Services\SignatureService;
+use GrimReapper\PdfServices\Services\ComparisonService;
 use GrimReapper\PdfServices\Services\BatchProcessorService;
 
 /**
@@ -15,86 +27,86 @@ interface PdfServicesInterface
     /**
      * Get the PDF creation service
      *
-     * @return mixed
+     * @return PdfCreationService
      */
-    public function createPdf();
+    public function createPdf(): PdfCreationService;
 
     /**
      * Get the PDF conversion service
      *
-     * @return mixed
+     * @return PdfConversionService
      */
-    public function convert();
+    public function convert(): PdfConversionService;
 
     /**
      * Get the PDF merge service
      *
-     * @return mixed
+     * @return PdfMergeService
      */
-    public function merge();
+    public function merge(): PdfMergeService;
 
     /**
      * Get the PDF split service
      *
-     * @return mixed
+     * @return PdfSplitService
      */
-    public function split();
+    public function split(): PdfSplitService;
 
     /**
      * Get the OCR service
      *
-     * @return mixed
+     * @return OcrService
      */
-    public function ocr();
+    public function ocr(): OcrService;
 
     /**
      * Get the compression service
      *
-     * @return mixed
+     * @return CompressionService
      */
-    public function compress();
+    public function compress(): CompressionService;
 
     /**
      * Get the security service
      *
-     * @return mixed
+     * @return SecurityService
      */
-    public function secure();
+    public function secure(): SecurityService;
 
     /**
      * Get the annotation service
      *
-     * @return mixed
+     * @return AnnotationService
      */
-    public function annotate();
+    public function annotate(): AnnotationService;
 
     /**
      * Get the form service
      *
-     * @return mixed
+     * @return FormService
      */
-    public function extract();
+    public function extract(): FormService;
 
     /**
      * Get the metadata service
      *
-     * @return mixed
+     * @return MetadataService
      */
-    public function metadata();
+    public function metadata(): MetadataService;
 
     /**
      * Get the signature service
      *
-     * @return mixed
+     * @return SignatureService
      */
-    public function signature();
+    public function signature(): SignatureService;
 
     /**
      * Get the comparison service
      *
-     * @return mixed
+     * @return ComparisonService
      */
-    public function compare();
+    public function compare(): ComparisonService;
 
     /**
      * Get the batch processor service
