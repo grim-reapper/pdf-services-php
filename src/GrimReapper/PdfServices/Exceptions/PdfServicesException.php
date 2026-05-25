@@ -67,9 +67,14 @@ class PdfServicesException extends Exception
     public static function fromApiError(array $errorResponse, int $httpCode = 0): self
     {
         $message = $errorResponse['error_description'] ?? $errorResponse['error'] ?? 'Unknown API error';
+
+        if (is_array($message)) {
+            $message = $message['message'] ?? json_encode($message);
+        }
+
         $requestId = $errorResponse['request-id'] ?? null;
         $details = $errorResponse;
 
-        return new static($message, $httpCode, $requestId, $details);
+        return new static((string) $message, $httpCode, $requestId, $details);
     }
 }
