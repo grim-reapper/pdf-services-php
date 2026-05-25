@@ -100,23 +100,33 @@ class HttpClient
             $url = $this->config->getBaseUrl() . $url;
         }
 
+        $isAdobeApi = strpos($url, 'adobe.io') !== false;
+        $isAuthRequest = strpos($url, 'adobelogin.com') !== false;
+
         // Prepare headers
         $defaultHeaders = [
             'Accept' => 'application/json',
-            'x-api-key' => $this->config->getClientId()
         ];
+
+        if ($isAdobeApi && !$isAuthRequest) {
+            $defaultHeaders['x-api-key'] = $this->config->getClientId();
+
+            if ($this->config->getOrganizationId()) {
+                $defaultHeaders['x-gw-ims-org-id'] = $this->config->getOrganizationId();
+            }
+
+            // Auto-authenticate if authService is present
+            if ($this->authService) {
+                $this->credentials = $this->authService->getCredentials();
+            }
+
+            if ($this->credentials) {
+                $defaultHeaders['Authorization'] = $this->credentials->getAuthorizationHeader();
+            }
+        }
 
         if (is_array($data) && !empty($data)) {
             $defaultHeaders['Content-Type'] = 'application/json';
-        }
-
-        // Auto-authenticate if authService is present and this is not an auth request
-        if ($this->authService && strpos($url, 'adobelogin.com') === false) {
-            $this->credentials = $this->authService->getCredentials();
-        }
-
-        if ($this->credentials) {
-            $defaultHeaders['Authorization'] = $this->credentials->getAuthorizationHeader();
         }
 
         $headers = array_merge($defaultHeaders, $headers);
@@ -279,15 +289,18 @@ class HttpClient
     {
         $this->log('debug', "Received response with status {$statusCode}");
 
+        $data = json_decode($responseBody, true);
+        $errorData = $data ?: $responseBody;
+
         if ($statusCode === 401) {
-            throw AuthenticationException::fromApiError(json_decode($responseBody, true) ?: [], $statusCode);
+            throw AuthenticationException::fromApiError($errorData, $statusCode);
         }
 
         if ($statusCode >= 400) {
-            throw ApiException::fromApiError(json_decode($responseBody, true) ?: [], $statusCode);
+            throw ApiException::fromApiError($errorData, $statusCode);
         }
 
-        return json_decode($responseBody, true) ?: [];
+        return $data ?: [];
     }
 
     /**

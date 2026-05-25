@@ -216,11 +216,13 @@ abstract class AbstractService implements ServiceInterface
         while (time() - $startTime < $maxWaitTime) {
             $response = $this->httpClient->request('GET', $location, [], [], true);
 
-            if ($response['status'] === 'done') {
+            $status = $response['status'] ?? '';
+
+            if ($status === 'done' || $status === 'completed') {
                 return $response;
             }
 
-            if ($response['status'] === 'failed') {
+            if ($status === 'failed') {
                 throw new \RuntimeException('Job failed: ' . json_encode($response['error'] ?? 'Unknown error'));
             }
 

@@ -60,21 +60,35 @@ class PdfServicesException extends Exception
     /**
      * Create exception from API error response
      *
-     * @param array $errorResponse The error response from Adobe API
+     * @param string|array $errorResponse The error response from Adobe API
      * @param int $httpCode The HTTP status code
      * @return static
      */
-    public static function fromApiError(array $errorResponse, int $httpCode = 0): self
+    public static function fromApiError(string|array $errorResponse, int $httpCode = 0): self
     {
-        $message = $errorResponse['error_description'] ?? $errorResponse['error'] ?? 'Unknown API error';
+        if (is_string($errorResponse)) {
+            // Handle XML (specifically S3 error responses)
+            if (str_contains($errorResponse, '<?xml') || str_contains($errorResponse, '<Error>')) {
+                if (preg_match('/<Message>(.*)<\/Message>/i', $errorResponse, $matches)) {
+                    return new static($matches[1], $httpCode, null, ['raw' => $errorResponse]);
+                }
+            }
 
-        if (is_array($message)) {
-            $message = $message['message'] ?? json_encode($message);
+            return new static($errorResponse, $httpCode);
         }
 
-        $requestId = $errorResponse['request-id'] ?? null;
-        $details = $errorResponse;
+        $message = $errorResponse['error_description']
+            ?? $errorResponse['error']
+            ?? $errorResponse['message']
+            ?? $errorResponse['msg']
+            ?? 'Unknown API error';
 
-        return new static((string) $message, $httpCode, $requestId, $details);
+        if (is_array($message)) {
+            $message = $message['message'] ?? $message['msg'] ?? json_encode($message);
+        }
+
+        $requestId = $errorResponse['request-id'] ?? $errorResponse['x-request-id'] ?? null;
+
+        return new static((string) $message, $httpCode, $requestId, $errorResponse);
     }
 }

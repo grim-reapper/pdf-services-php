@@ -50,4 +50,22 @@ class ExceptionTest extends TestCase
 
         $this->assertEquals(json_encode(['some' => 'data']), $exception->getMessage());
     }
+
+    public function testFromApiErrorWithXmlMessage(): void
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><RequestId>REQ123</RequestId><HostId>HOST123</HostId></Error>';
+
+        $exception = PdfServicesException::fromApiError($xml, 403);
+
+        $this->assertEquals('Access Denied', $exception->getMessage());
+        $this->assertEquals(403, $exception->getCode());
+    }
+
+    public function testFromApiErrorWithPlainString(): void
+    {
+        $msg = 'Just a plain error string';
+        $exception = PdfServicesException::fromApiError($msg, 500);
+
+        $this->assertEquals($msg, $exception->getMessage());
+    }
 }
