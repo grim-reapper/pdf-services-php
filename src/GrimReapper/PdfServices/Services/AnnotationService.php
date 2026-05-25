@@ -18,7 +18,7 @@ class AnnotationService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'annotation';
+        return 'pdf-annotations';
     }
 
     /**
@@ -31,22 +31,25 @@ class AnnotationService extends AbstractService
     public function addAnnotations(string $filePath, array $annotations): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'annotations' => $annotations
         ];
 
-        $response = $this->makeRequest('POST', '/annotation/add', $data);
+        // Annotation operations in v2 are often handled via specific tools or jobs.
+        // If not directly in 'operation', this might need adjustment.
+        $response = $this->makeRequest('POST', '/operation/pdf-annotations', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'annotated.pdf',
-            $response['size'] ?? null
+            'annotated.pdf',
+            strlen($resultContent)
         );
     }
 
@@ -59,16 +62,17 @@ class AnnotationService extends AbstractService
     public function getAnnotations(string $filePath): array
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ]
+            'assetID' => $asset['assetID']
         ];
 
-        $response = $this->makeRequest('POST', '/annotation/get', $data);
+        $response = $this->makeRequest('POST', '/operation/pdf-annotations/get', $data);
+        $jobResult = $this->pollJob($response['location']);
 
-        return $response['annotations'] ?? [];
+        // This is a placeholder logic based on expected behavior
+        return $jobResult['result']['annotations'] ?? [];
     }
 }

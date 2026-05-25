@@ -18,7 +18,7 @@ class PdfCreationService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'pdf-creation';
+        return 'createpdf';
     }
 
     /**
@@ -30,18 +30,22 @@ class PdfCreationService extends AbstractService
      */
     public function fromHtml(string $html, array $options = []): Document
     {
+        $asset = $this->uploadAsset($html, 'text/html');
+
         $data = [
-            'html' => $html,
+            'assetID' => $asset['assetID'],
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/pdf-creation/html', $data);
+        $response = $this->makeRequest('POST', '/operation/createpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $content = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($content),
             'application/pdf',
-            $response['filename'] ?? 'document.pdf',
-            $response['size'] ?? null
+            'document.pdf',
+            strlen($content)
         );
     }
 }

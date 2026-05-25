@@ -18,7 +18,7 @@ class PdfSplitService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'pdf-split';
+        return 'splitpdf';
     }
 
     /**
@@ -31,24 +31,25 @@ class PdfSplitService extends AbstractService
     public function split(string $filePath, array $options = []): array
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/pdf-split', $data);
+        $response = $this->makeRequest('POST', '/operation/splitpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
 
         $results = [];
-        foreach ($response['documents'] as $docData) {
+        foreach ($jobResult['result']['assets'] as $assetData) {
+            $resultContent = $this->httpClient->download($assetData['downloadUri']);
             $results[] = new Document(
-                $docData['content'],
+                base64_encode($resultContent),
                 'application/pdf',
-                $docData['filename'] ?? 'split.pdf',
-                $docData['size'] ?? null
+                'split.pdf',
+                strlen($resultContent)
             );
         }
 

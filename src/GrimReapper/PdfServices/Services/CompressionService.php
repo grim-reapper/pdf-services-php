@@ -18,7 +18,7 @@ class CompressionService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'compression';
+        return 'compresspdf';
     }
 
     /**
@@ -31,22 +31,23 @@ class CompressionService extends AbstractService
     public function compress(string $filePath, array $options = []): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
-            'options' => $options
+            'assetID' => $asset['assetID'],
+            'compressionLevel' => $options['compressionLevel'] ?? 'MEDIUM'
         ];
 
-        $response = $this->makeRequest('POST', '/compress', $data);
+        $response = $this->makeRequest('POST', '/operation/compresspdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'compressed.pdf',
-            $response['size'] ?? null
+            'compressed.pdf',
+            strlen($resultContent)
         );
     }
 }

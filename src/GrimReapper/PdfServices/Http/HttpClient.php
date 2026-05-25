@@ -68,26 +68,33 @@ class HttpClient
      * Make an HTTP request
      *
      * @param string $method The HTTP method
-     * @param string $endpoint The API endpoint
-     * @param array $data The request data
+     * @param string $url The URL or endpoint
+     * @param mixed $data The request data
      * @param array $headers Additional headers
+     * @param bool $isFullUrl Whether the URL is a full URL
      * @return array The response data
      * @throws ApiException
      * @throws AuthenticationException
      */
     public function request(
         string $method,
-        string $endpoint,
-        array $data = [],
-        array $headers = []
+        string $url,
+        mixed $data = [],
+        array $headers = [],
+        bool $isFullUrl = false
     ): array {
-        $url = $this->config->getBaseUrl() . $endpoint;
+        if (!$isFullUrl) {
+            $url = $this->config->getBaseUrl() . $url;
+        }
 
         // Prepare headers
         $defaultHeaders = [
-            'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
+
+        if (is_array($data) && !empty($data)) {
+            $defaultHeaders['Content-Type'] = 'application/json';
+        }
 
         if ($this->credentials) {
             $defaultHeaders['Authorization'] = $this->credentials->getAuthorizationHeader();
@@ -97,7 +104,7 @@ class HttpClient
 
         $this->log('debug', "Making {$method} request to {$url}", [
             'headers' => array_keys($headers),
-            'data_keys' => array_keys($data)
+            'data_keys' => is_array($data) ? array_keys($data) : 'binary'
         ]);
 
         try {
@@ -106,19 +113,46 @@ class HttpClient
             } else {
                 return $this->makeCurlRequest($method, $url, $data, $headers);
             }
+        } catch (AuthenticationException|ApiException $e) {
+            $this->log('error', 'API error', [
+                'method' => $method,
+                'url' => $url,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
         } catch (\Exception $e) {
             $this->log('error', 'HTTP request failed', [
                 'method' => $method,
                 'url' => $url,
                 'error' => $e->getMessage()
             ]);
-
-            if ($e instanceof AuthenticationException || $e instanceof ApiException) {
-                throw $e;
-            }
-
             throw new ApiException('HTTP request failed: ' . $e->getMessage(), 0, null, null, $e);
         }
+    }
+
+    /**
+     * Download a file from a URL
+     *
+     * @param string $url The URL to download from
+     * @return string The file content
+     */
+    public function download(string $url): string
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+
+        $content = curl_exec($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($statusCode >= 400) {
+            throw new ApiException("Failed to download file from {$url}. Status code: {$statusCode}");
+        }
+
+        return (string)$content;
     }
 
     /**
@@ -126,11 +160,11 @@ class HttpClient
      *
      * @param string $method The HTTP method
      * @param string $url The URL
-     * @param array $data The request data
+     * @param mixed $data The request data
      * @param array $headers The headers
      * @return array The response data
      */
-    private function makePsrRequest(string $method, string $url, array $data, array $headers): array
+    private function makePsrRequest(string $method, string $url, mixed $data, array $headers): array
     {
         $request = $this->requestFactory->createRequest($method, $url);
 
@@ -139,7 +173,7 @@ class HttpClient
         }
 
         if (!empty($data)) {
-            $body = json_encode($data);
+            $body = is_array($data) ? json_encode($data) : $data;
             $stream = $this->streamFactory->createStream($body);
             $request = $request->withBody($stream);
         }
@@ -147,6 +181,14 @@ class HttpClient
         $response = $this->psrClient->sendRequest($request);
 
         $statusCode = $response->getStatusCode();
+        // Check for Location header (common in asynchronous APIs)
+        if ($statusCode === 201 || $statusCode === 202) {
+            $location = $response->getHeaderLine('Location');
+            if ($location) {
+                return ['location' => $location, 'status_code' => $statusCode];
+            }
+        }
+
         $responseBody = $response->getBody()->getContents();
 
         return $this->handleResponse($statusCode, $responseBody);
@@ -157,11 +199,11 @@ class HttpClient
      *
      * @param string $method The HTTP method
      * @param string $url The URL
-     * @param array $data The request data
+     * @param mixed $data The request data
      * @param array $headers The headers
      * @return array The response data
      */
-    private function makeCurlRequest(string $method, string $url, array $data, array $headers): array
+    private function makeCurlRequest(string $method, string $url, mixed $data, array $headers): array
     {
         $ch = curl_init();
 
@@ -169,9 +211,11 @@ class HttpClient
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $this->formatHeaders($headers));
+        curl_setopt($ch, CURLOPT_HEADER, true); // Include headers in output
 
         if (!empty($data)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            $body = is_array($data) ? json_encode($data) : $data;
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
 
         // Add timeout and other options
@@ -180,16 +224,27 @@ class HttpClient
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 
         $response = curl_exec($ch);
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-
-        curl_close($ch);
 
         if ($response === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
             throw new ApiException('cURL error: ' . $error);
         }
 
-        return $this->handleResponse($statusCode, $response);
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $headerStr = substr((string)$response, 0, $headerSize);
+        $body = substr((string)$response, $headerSize);
+
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($statusCode === 201 || $statusCode === 202) {
+            if (preg_match('/Location: (.*)/i', $headerStr, $matches)) {
+                return ['location' => trim($matches[1]), 'status_code' => $statusCode];
+            }
+        }
+
+        return $this->handleResponse($statusCode, $body);
     }
 
     /**

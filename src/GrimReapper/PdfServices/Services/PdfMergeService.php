@@ -18,7 +18,7 @@ class PdfMergeService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'pdf-merge';
+        return 'combinepdf';
     }
 
     /**
@@ -29,27 +29,25 @@ class PdfMergeService extends AbstractService
      */
     public function combine(array $filePaths): Document
     {
-        $inputs = [];
+        $assets = [];
         foreach ($filePaths as $path) {
             $this->validateFile($path);
-            $doc = Document::fromFile($path);
-            $inputs[] = [
-                'content' => $doc->getContent(),
-                'filename' => basename($path)
-            ];
+            $content = file_get_contents($path);
+            $asset = $this->uploadAsset($content, 'application/pdf');
+            $assets[] = ['assetID' => $asset['assetID']];
         }
 
-        $data = [
-            'inputs' => $inputs
-        ];
+        $data = ['assets' => $assets];
 
-        $response = $this->makeRequest('POST', '/pdf-merge', $data);
+        $response = $this->makeRequest('POST', '/operation/combinepdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'merged.pdf',
-            $response['size'] ?? null
+            'merged.pdf',
+            strlen($resultContent)
         );
     }
 }

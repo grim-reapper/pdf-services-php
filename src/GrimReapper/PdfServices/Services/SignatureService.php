@@ -31,22 +31,24 @@ class SignatureService extends AbstractService
     public function addSignatureField(string $filePath, array $options): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/signature/add-field', $data);
+        // This usually falls under 'pdefeal' or specific signature operations in v2
+        $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'signature_field.pdf',
-            $response['size'] ?? null
+            'signature_field.pdf',
+            strlen($resultContent)
         );
     }
 
@@ -60,22 +62,23 @@ class SignatureService extends AbstractService
     public function addSignature(string $filePath, array $options): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/signature/add-signature', $data);
+        $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'signed.pdf',
-            $response['size'] ?? null
+            'signed.pdf',
+            strlen($resultContent)
         );
     }
 }

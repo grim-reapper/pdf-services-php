@@ -31,22 +31,23 @@ class OcrService extends AbstractService
     public function ocr(string $filePath, array $options = []): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/ocr', $data);
+        $response = $this->makeRequest('POST', '/operation/ocr', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'ocr_output.pdf',
-            $response['size'] ?? null
+            'ocr_output.pdf',
+            strlen($resultContent)
         );
     }
 }

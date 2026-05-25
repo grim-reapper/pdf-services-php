@@ -31,23 +31,19 @@ class PdfConversionService extends AbstractService
     public function docxToPdf(string $filePath): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
-        $data = [
-            'input' => [
-                'content' => $document->getContent(),
-                'format' => 'docx'
-            ],
-            'output' => ['format' => 'pdf']
-        ];
-
-        $response = $this->makeRequest('POST', '/pdf-conversion/docx-to-pdf', $data);
+        $data = ['assetID' => $asset['assetID']];
+        $response = $this->makeRequest('POST', '/operation/createpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'output.pdf',
-            $response['size'] ?? null
+            'output.pdf',
+            strlen($resultContent)
         );
     }
 
@@ -60,23 +56,22 @@ class PdfConversionService extends AbstractService
     public function pdfToDocx(string $filePath): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent(),
-                'format' => 'pdf'
-            ],
-            'output' => ['format' => 'docx']
+            'assetID' => $asset['assetID'],
+            'targetFormat' => 'docx'
         ];
-
-        $response = $this->makeRequest('POST', '/pdf-conversion/pdf-to-docx', $data);
+        $response = $this->makeRequest('POST', '/operation/exportpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            $response['filename'] ?? 'output.docx',
-            $response['size'] ?? null
+            'output.docx',
+            strlen($resultContent)
         );
     }
 
@@ -89,23 +84,22 @@ class PdfConversionService extends AbstractService
     public function imageToPdf(string $filePath): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mediaType = 'image/' . ($extension === 'jpg' ? 'jpeg' : $extension);
 
-        $data = [
-            'input' => [
-                'content' => $document->getContent(),
-                'format' => pathinfo($filePath, PATHINFO_EXTENSION)
-            ],
-            'output' => ['format' => 'pdf']
-        ];
+        $asset = $this->uploadAsset($content, $mediaType);
 
-        $response = $this->makeRequest('POST', '/pdf-conversion/image-to-pdf', $data);
+        $data = ['assetID' => $asset['assetID']];
+        $response = $this->makeRequest('POST', '/operation/createpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'output.pdf',
-            $response['size'] ?? null
+            'output.pdf',
+            strlen($resultContent)
         );
     }
 
@@ -118,48 +112,47 @@ class PdfConversionService extends AbstractService
     public function docxToPdfAsync(string $filePath): Job
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
-        $data = [
-            'input' => [
-                'content' => $document->getContent(),
-                'format' => 'docx'
-            ],
-            'output' => ['format' => 'pdf']
-        ];
+        $data = ['assetID' => $asset['assetID']];
+        $response = $this->makeRequest('POST', '/operation/createpdf', $data);
 
-        $response = $this->makeRequest('POST', '/pdf-conversion/docx-to-pdf/async', $data);
-
-        return Job::fromApiResponse($response);
+        return new Job($response['location'], 'in_progress');
     }
 
     /**
      * Get the status of a conversion job
      *
-     * @param string $jobId The job ID
+     * @param string $jobId The job ID (location URL)
      * @return Job The job status
      */
     public function getJobStatus(string $jobId): Job
     {
-        $response = $this->makeRequest('GET', "/pdf-conversion/jobs/{$jobId}");
+        $response = $this->httpClient->request('GET', $jobId, [], [], true);
         return Job::fromApiResponse($response);
     }
 
     /**
      * Get the result of a completed conversion job
      *
-     * @param string $jobId The job ID
+     * @param string $jobId The job ID (location URL)
      * @return Document The result document
      */
     public function getJobResult(string $jobId): Document
     {
-        $response = $this->makeRequest('GET', "/pdf-conversion/jobs/{$jobId}/result");
+        $response = $this->httpClient->request('GET', $jobId, [], [], true);
+        if ($response['status'] !== 'done') {
+            throw new \RuntimeException('Job is not completed yet');
+        }
+
+        $content = $this->httpClient->download($response['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
-            $response['mimeType'] ?? 'application/pdf',
-            $response['filename'] ?? 'output.pdf',
-            $response['size'] ?? null
+            base64_encode($content),
+            'application/pdf',
+            'output.pdf',
+            strlen($content)
         );
     }
 }

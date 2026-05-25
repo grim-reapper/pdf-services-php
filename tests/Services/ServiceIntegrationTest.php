@@ -50,18 +50,18 @@ class ServiceIntegrationTest extends TestCase
 
     public function testServiceNames(): void
     {
-        $this->assertEquals('pdf-creation', $this->client->createPdf()->getServiceName());
+        $this->assertEquals('createpdf', $this->client->createPdf()->getServiceName());
         $this->assertEquals('pdf-conversion', $this->client->convert()->getServiceName());
-        $this->assertEquals('pdf-merge', $this->client->merge()->getServiceName());
-        $this->assertEquals('pdf-split', $this->client->split()->getServiceName());
+        $this->assertEquals('combinepdf', $this->client->merge()->getServiceName());
+        $this->assertEquals('splitpdf', $this->client->split()->getServiceName());
         $this->assertEquals('ocr', $this->client->ocr()->getServiceName());
-        $this->assertEquals('compression', $this->client->compress()->getServiceName());
-        $this->assertEquals('security', $this->client->secure()->getServiceName());
-        $this->assertEquals('annotation', $this->client->annotate()->getServiceName());
-        $this->assertEquals('form', $this->client->extract()->getServiceName());
-        $this->assertEquals('metadata', $this->client->metadata()->getServiceName());
+        $this->assertEquals('compresspdf', $this->client->compress()->getServiceName());
+        $this->assertEquals('protectpdf', $this->client->secure()->getServiceName());
+        $this->assertEquals('pdf-annotations', $this->client->annotate()->getServiceName());
+        $this->assertEquals('form-data-extraction', $this->client->extract()->getServiceName());
+        $this->assertEquals('pdfproperties', $this->client->metadata()->getServiceName());
         $this->assertEquals('signature', $this->client->signature()->getServiceName());
-        $this->assertEquals('comparison', $this->client->compare()->getServiceName());
+        $this->assertEquals('comparepdf', $this->client->compare()->getServiceName());
         $this->assertEquals('batch-processor', $this->client->batch()->getServiceName());
     }
 }

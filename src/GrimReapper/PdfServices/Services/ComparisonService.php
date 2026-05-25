@@ -19,7 +19,7 @@ class ComparisonService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'comparison';
+        return 'comparepdf';
     }
 
     /**
@@ -34,21 +34,21 @@ class ComparisonService extends AbstractService
         $this->validateFile($baseFilePath);
         $this->validateFile($comparisonFilePath);
 
-        $baseDoc = Document::fromFile($baseFilePath);
-        $comparisonDoc = Document::fromFile($comparisonFilePath);
+        $baseContent = file_get_contents($baseFilePath);
+        $comparisonContent = file_get_contents($comparisonFilePath);
+
+        $baseAsset = $this->uploadAsset($baseContent, 'application/pdf');
+        $comparisonAsset = $this->uploadAsset($comparisonContent, 'application/pdf');
 
         $data = [
-            'base' => [
-                'content' => $baseDoc->getContent()
-            ],
-            'comparison' => [
-                'content' => $comparisonDoc->getContent()
-            ]
+            'baseAssetID' => $baseAsset['assetID'],
+            'comparisonAssetID' => $comparisonAsset['assetID']
         ];
 
-        $response = $this->makeRequest('POST', '/comparison/compare', $data);
+        $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
+        $jobResult = $this->pollJob($response['location']);
 
-        return ComparisonResult::fromApiResponse($response);
+        return ComparisonResult::fromApiResponse($jobResult['result'] ?? []);
     }
 
     /**
@@ -67,25 +67,28 @@ class ComparisonService extends AbstractService
         $this->validateFile($baseFilePath);
         $this->validateFile($comparisonFilePath);
 
-        $baseDoc = Document::fromFile($baseFilePath);
-        $comparisonDoc = Document::fromFile($comparisonFilePath);
+        $baseContent = file_get_contents($baseFilePath);
+        $comparisonContent = file_get_contents($comparisonFilePath);
+
+        $baseAsset = $this->uploadAsset($baseContent, 'application/pdf');
+        $comparisonAsset = $this->uploadAsset($comparisonContent, 'application/pdf');
 
         $data = [
-            'base' => [
-                'content' => $baseDoc->getContent()
-            ],
-            'comparison' => [
-                'content' => $comparisonDoc->getContent()
-            ]
+            'baseAssetID' => $baseAsset['assetID'],
+            'comparisonAssetID' => $comparisonAsset['assetID'],
+            'includeDiffReport' => true
         ];
 
-        $response = $this->makeRequest('POST', '/comparison/diff-report', $data);
+        $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+
+        $resultContent = $this->httpClient->download($jobResult['result']['diffReport']['downloadUri']);
 
         $document = new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'diff_report.pdf',
-            $response['size'] ?? null
+            'diff_report.pdf',
+            strlen($resultContent)
         );
 
         if ($outputPath) {

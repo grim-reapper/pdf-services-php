@@ -18,7 +18,7 @@ class SecurityService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'security';
+        return 'protectpdf';
     }
 
     /**
@@ -31,22 +31,25 @@ class SecurityService extends AbstractService
     public function protect(string $filePath, array $options = []): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
-            'options' => $options
+            'assetID' => $asset['assetID'],
+            'password' => $options['password'] ?? null,
+            'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
+            'permissions' => $options['permissions'] ?? []
         ];
 
-        $response = $this->makeRequest('POST', '/security/protect', $data);
+        $response = $this->makeRequest('POST', '/operation/protectpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'protected.pdf',
-            $response['size'] ?? null
+            'protected.pdf',
+            strlen($resultContent)
         );
     }
 
@@ -60,22 +63,23 @@ class SecurityService extends AbstractService
     public function unprotect(string $filePath, string $password): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
+            'assetID' => $asset['assetID'],
             'password' => $password
         ];
 
-        $response = $this->makeRequest('POST', '/security/unprotect', $data);
+        $response = $this->makeRequest('POST', '/operation/removeprotection', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'unprotected.pdf',
-            $response['size'] ?? null
+            'unprotected.pdf',
+            strlen($resultContent)
         );
     }
 }

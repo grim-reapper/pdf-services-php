@@ -18,7 +18,7 @@ class MetadataService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'metadata';
+        return 'pdfproperties';
     }
 
     /**
@@ -30,17 +30,17 @@ class MetadataService extends AbstractService
     public function getMetadata(string $filePath): array
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ]
+            'assetID' => $asset['assetID']
         ];
 
-        $response = $this->makeRequest('POST', '/metadata/get', $data);
+        $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
+        $jobResult = $this->pollJob($response['location']);
 
-        return $response['metadata'] ?? [];
+        return $jobResult['result']['pdfProperties'] ?? [];
     }
 
     /**
@@ -52,23 +52,9 @@ class MetadataService extends AbstractService
      */
     public function setMetadata(string $filePath, array $metadata): Document
     {
-        $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
-
-        $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
-            'metadata' => $metadata
-        ];
-
-        $response = $this->makeRequest('POST', '/metadata/set', $data);
-
-        return new Document(
-            $response['content'],
-            'application/pdf',
-            $response['filename'] ?? 'metadata_updated.pdf',
-            $response['size'] ?? null
-        );
+        // Adobe PDF Services doesn't have a direct 'set metadata' operation in v2.
+        // It's usually part of other operations or achieved via Document Generation.
+        // For now, we'll keep the structure but it might not be supported directly.
+        throw new \BadMethodCallException('Setting metadata is not directly supported in PDF Services API v2');
     }
 }

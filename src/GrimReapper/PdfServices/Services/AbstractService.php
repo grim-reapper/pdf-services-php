@@ -183,4 +183,49 @@ abstract class AbstractService implements ServiceInterface
             throw new \InvalidArgumentException("Path is not a file: {$filePath}");
         }
     }
+
+    /**
+     * Upload an asset to Adobe PDF Services
+     *
+     * @param string $content The file content
+     * @param string $mediaType The media type
+     * @return array The asset details
+     */
+    protected function uploadAsset(string $content, string $mediaType): array
+    {
+        $response = $this->makeRequest('POST', '/assets', ['mediaType' => $mediaType]);
+
+        $this->httpClient->request('PUT', $response['uploadUri'], $content, [
+            'Content-Type' => $mediaType
+        ], true);
+
+        return $response;
+    }
+
+    /**
+     * Poll for job completion
+     *
+     * @param string $location The job location URL
+     * @param int $maxWaitTime Maximum wait time in seconds
+     * @return array The job result
+     */
+    protected function pollJob(string $location, int $maxWaitTime = 300): array
+    {
+        $startTime = time();
+        while (time() - $startTime < $maxWaitTime) {
+            $response = $this->httpClient->request('GET', $location, [], [], true);
+
+            if ($response['status'] === 'done') {
+                return $response;
+            }
+
+            if ($response['status'] === 'failed') {
+                throw new \RuntimeException('Job failed: ' . json_encode($response['error'] ?? 'Unknown error'));
+            }
+
+            sleep(2);
+        }
+
+        throw new \RuntimeException('Job timed out');
+    }
 }

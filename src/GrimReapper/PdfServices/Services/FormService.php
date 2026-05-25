@@ -18,7 +18,7 @@ class FormService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'form';
+        return 'form-data-extraction';
     }
 
     /**
@@ -30,17 +30,18 @@ class FormService extends AbstractService
     public function extractData(string $filePath): array
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ]
+            'assetID' => $asset['assetID']
         ];
 
-        $response = $this->makeRequest('POST', '/form/extract', $data);
+        $response = $this->makeRequest('POST', '/operation/extractpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['content']['downloadUri']);
 
-        return $response['fields'] ?? [];
+        return json_decode($resultContent, true);
     }
 
     /**
@@ -53,22 +54,23 @@ class FormService extends AbstractService
     public function fillForm(string $filePath, array $fieldData): Document
     {
         $this->validateFile($filePath);
-        $document = Document::fromFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'input' => [
-                'content' => $document->getContent()
-            ],
-            'fieldData' => $fieldData
+            'assetID' => $asset['assetID'],
+            'data' => $fieldData
         ];
 
-        $response = $this->makeRequest('POST', '/form/fill', $data);
+        $response = $this->makeRequest('POST', '/operation/setformdata', $data);
+        $jobResult = $this->pollJob($response['location']);
+        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
 
         return new Document(
-            $response['content'],
+            base64_encode($resultContent),
             'application/pdf',
-            $response['filename'] ?? 'filled.pdf',
-            $response['size'] ?? null
+            'filled.pdf',
+            strlen($resultContent)
         );
     }
 }
