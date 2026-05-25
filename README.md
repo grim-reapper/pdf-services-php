@@ -41,9 +41,10 @@ use GrimReapper\PdfServices\Config\PdfServicesConfig;
 
 // Configure the client
 $config = new PdfServicesConfig(
-    apiKey: 'your-api-key',
     clientId: 'your-client-id',
-    organizationId: 'your-organization-id'
+    clientSecret: 'your-client-secret',
+    organizationId: 'your-organization-id',
+    region: 'us' // or 'eu'
 );
 
 // Create the client
@@ -161,10 +162,10 @@ if (!$result->areIdentical()) {
 You can configure the client using environment variables:
 
 ```bash
-export GRIM_REAPPER_PDF_SERVICES_API_KEY="your-api-key"
 export GRIM_REAPPER_PDF_SERVICES_CLIENT_ID="your-client-id"
+export GRIM_REAPPER_PDF_SERVICES_CLIENT_SECRET="your-client-secret"
 export GRIM_REAPPER_PDF_SERVICES_ORGANIZATION_ID="your-organization-id"
-export GRIM_REAPPER_PDF_SERVICES_ENVIRONMENT="production"
+export GRIM_REAPPER_PDF_SERVICES_REGION="us"
 ```
 
 Then create the config from environment:
