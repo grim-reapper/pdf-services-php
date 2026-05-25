@@ -39,7 +39,7 @@ class SignatureService extends AbstractService
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
+        $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
@@ -70,7 +70,7 @@ class SignatureService extends AbstractService
             'options' => $options
         ];
 
-        $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
+        $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
