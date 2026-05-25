@@ -39,11 +39,10 @@ class AnnotationService extends AbstractService
             'annotations' => $annotations
         ];
 
-        // Annotation operations in v2 are often handled via specific tools or jobs.
-        // If not directly in 'operation', this might need adjustment.
         $response = $this->makeRequest('POST', '/operation/pdf-annotations', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -72,7 +71,6 @@ class AnnotationService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/pdf-annotations/get', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        // This is a placeholder logic based on expected behavior
-        return $jobResult['result']['annotations'] ?? [];
+        return $this->getResultData($jobResult, 'annotations');
     }
 }

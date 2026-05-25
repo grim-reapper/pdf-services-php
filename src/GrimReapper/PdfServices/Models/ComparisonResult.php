@@ -121,13 +121,16 @@ class ComparisonResult
      */
     public static function fromApiResponse(array $response): self
     {
+        // Handle nested 'result' key if present
+        $data = isset($response['result']) && is_array($response['result']) ? $response['result'] : $response;
+
         $result = new self(
-            $response['identical'] ?? true,
-            $response['differenceCount'] ?? 0
+            $data['identical'] ?? true,
+            $data['differenceCount'] ?? 0
         );
 
-        if (isset($response['differences']) && is_array($response['differences'])) {
-            foreach ($response['differences'] as $diff) {
+        if (isset($data['differences']) && is_array($data['differences'])) {
+            foreach ($data['differences'] as $diff) {
                 $result->addDifference(Comparison::fromApiResponse($diff));
             }
         }

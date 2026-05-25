@@ -40,7 +40,7 @@ class MetadataService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        return $jobResult['result']['pdfProperties'] ?? [];
+        return $this->getResultData($jobResult, 'pdfProperties');
     }
 
     /**

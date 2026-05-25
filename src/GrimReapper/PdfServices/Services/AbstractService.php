@@ -231,4 +231,27 @@ abstract class AbstractService implements ServiceInterface
 
         throw new \RuntimeException('Job timed out');
     }
+
+    /**
+     * Get data from the response, handling different response structures
+     *
+     * @param array $response The API response
+     * @param string $key The data key
+     * @return mixed The data
+     * @throws \RuntimeException If the key is not found
+     */
+    protected function getResultData(array $response, string $key): mixed
+    {
+        // Try top-level
+        if (isset($response[$key])) {
+            return $response[$key];
+        }
+
+        // Try under 'result'
+        if (isset($response['result']) && isset($response['result'][$key])) {
+            return $response['result'][$key];
+        }
+
+        throw new \RuntimeException("Missing '{$key}' in API response: " . json_encode($response));
+    }
 }

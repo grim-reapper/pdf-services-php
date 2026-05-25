@@ -39,7 +39,8 @@ class PdfCreationService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $content = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($content),

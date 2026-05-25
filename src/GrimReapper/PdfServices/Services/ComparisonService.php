@@ -48,7 +48,7 @@ class ComparisonService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        return ComparisonResult::fromApiResponse($jobResult['result'] ?? []);
+        return ComparisonResult::fromApiResponse($jobResult);
     }
 
     /**
@@ -82,7 +82,8 @@ class ComparisonService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        $resultContent = $this->httpClient->download($jobResult['result']['diffReport']['downloadUri']);
+        $diffReportData = $this->getResultData($jobResult, 'diffReport');
+        $resultContent = $this->httpClient->download($diffReportData['downloadUri']);
 
         $document = new Document(
             base64_encode($resultContent),

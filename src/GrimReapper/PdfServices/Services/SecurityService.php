@@ -43,7 +43,8 @@ class SecurityService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/protectpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -73,7 +74,8 @@ class SecurityService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/removeprotection', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),

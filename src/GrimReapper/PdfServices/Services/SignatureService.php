@@ -39,10 +39,10 @@ class SignatureService extends AbstractService
             'options' => $options
         ];
 
-        // This usually falls under 'pdefeal' or specific signature operations in v2
         $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -72,7 +72,8 @@ class SignatureService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/pdefeal', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),

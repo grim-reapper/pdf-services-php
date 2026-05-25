@@ -41,7 +41,8 @@ class CompressionService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/compresspdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),

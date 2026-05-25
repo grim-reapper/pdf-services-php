@@ -41,9 +41,10 @@ class PdfSplitService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/splitpdf', $data);
         $jobResult = $this->pollJob($response['location']);
+        $assetsData = $this->getResultData($jobResult, 'assets');
 
         $results = [];
-        foreach ($jobResult['result']['assets'] as $assetData) {
+        foreach ($assetsData as $assetData) {
             $resultContent = $this->httpClient->download($assetData['downloadUri']);
             $results[] = new Document(
                 base64_encode($resultContent),

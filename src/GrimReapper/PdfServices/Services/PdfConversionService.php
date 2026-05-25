@@ -37,7 +37,8 @@ class PdfConversionService extends AbstractService
         $data = ['assetID' => $asset['assetID']];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -65,7 +66,8 @@ class PdfConversionService extends AbstractService
         ];
         $response = $this->makeRequest('POST', '/operation/exportpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -93,7 +95,8 @@ class PdfConversionService extends AbstractService
         $data = ['assetID' => $asset['assetID']];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $resultContent = $this->httpClient->download($jobResult['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($resultContent),
@@ -142,11 +145,12 @@ class PdfConversionService extends AbstractService
     public function getJobResult(string $jobId): Document
     {
         $response = $this->httpClient->request('GET', $jobId, [], [], true);
-        if ($response['status'] !== 'done') {
+        if (($response['status'] ?? '') !== 'done' && ($response['status'] ?? '') !== 'completed') {
             throw new \RuntimeException('Job is not completed yet');
         }
 
-        $content = $this->httpClient->download($response['result']['asset']['downloadUri']);
+        $assetData = $this->getResultData($response, 'asset');
+        $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
             base64_encode($content),
