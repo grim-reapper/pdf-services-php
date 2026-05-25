@@ -24,6 +24,7 @@ class HttpClient
     private ?StreamFactoryInterface $streamFactory;
     private ?Credentials $credentials;
     private ?LoggerInterface $logger;
+    private ?\GrimReapper\PdfServices\Services\AuthService $authService = null;
 
     /**
      * Create a new HTTP client
@@ -38,6 +39,18 @@ class HttpClient
         $this->streamFactory = $config->getStreamFactory();
         $this->credentials = null;
         $this->logger = null;
+    }
+
+    /**
+     * Set the auth service
+     *
+     * @param \GrimReapper\PdfServices\Services\AuthService $authService
+     * @return self
+     */
+    public function setAuthService(\GrimReapper\PdfServices\Services\AuthService $authService): self
+    {
+        $this->authService = $authService;
+        return $this;
     }
 
     /**
@@ -90,10 +103,16 @@ class HttpClient
         // Prepare headers
         $defaultHeaders = [
             'Accept' => 'application/json',
+            'x-api-key' => $this->config->getClientId()
         ];
 
         if (is_array($data) && !empty($data)) {
             $defaultHeaders['Content-Type'] = 'application/json';
+        }
+
+        // Auto-authenticate if authService is present and this is not an auth request
+        if ($this->authService && strpos($url, 'adobelogin.com') === false) {
+            $this->credentials = $this->authService->getCredentials();
         }
 
         if ($this->credentials) {

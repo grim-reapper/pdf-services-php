@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GrimReapper\PdfServices;
 
 use GrimReapper\PdfServices\Config\PdfServicesConfig;
+use GrimReapper\PdfServices\Http\HttpClient;
+use GrimReapper\PdfServices\Services\AuthService;
 use GrimReapper\PdfServices\Services\PdfCreationService;
 use GrimReapper\PdfServices\Services\PdfConversionService;
 use GrimReapper\PdfServices\Services\PdfMergeService;
@@ -29,6 +31,8 @@ use GrimReapper\Contracts\PdfServicesInterface;
 class Client implements PdfServicesInterface
 {
     private PdfServicesConfig $config;
+    private HttpClient $httpClient;
+    private AuthService $authService;
     private array $services = [];
 
     /**
@@ -39,6 +43,9 @@ class Client implements PdfServicesInterface
     public function __construct(PdfServicesConfig $config)
     {
         $this->config = $config;
+        $this->httpClient = new HttpClient($config);
+        $this->authService = new AuthService($config);
+        $this->httpClient->setAuthService($this->authService);
     }
 
     /**
@@ -50,7 +57,7 @@ class Client implements PdfServicesInterface
     private function getService(string $class): mixed
     {
         if (!isset($this->services[$class])) {
-            $this->services[$class] = new $class($this->config);
+            $this->services[$class] = new $class($this->config, $this->httpClient);
         }
 
         return $this->services[$class];

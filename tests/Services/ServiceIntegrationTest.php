@@ -27,7 +27,7 @@ class ServiceIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $config = new PdfServicesConfig('key', 'client', 'org');
+        $config = new PdfServicesConfig('key', 'client', 'secret', 'org');
         $this->client = new Client($config);
     }
 

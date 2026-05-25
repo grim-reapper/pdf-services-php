@@ -25,11 +25,12 @@ abstract class AbstractService implements ServiceInterface
      * Create a new service instance
      *
      * @param PdfServicesConfig $config The PDF services configuration
+     * @param HttpClient|null $httpClient Optional HTTP client (shared)
      */
-    public function __construct(PdfServicesConfig $config)
+    public function __construct(PdfServicesConfig $config, ?HttpClient $httpClient = null)
     {
         $this->config = $config;
-        $this->httpClient = new HttpClient($config);
+        $this->httpClient = $httpClient ?? new HttpClient($config);
         $this->logger = null;
     }
 

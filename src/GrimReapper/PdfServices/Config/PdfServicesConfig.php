@@ -18,6 +18,7 @@ class PdfServicesConfig
 {
     private string $apiKey;
     private string $clientId;
+    private string $clientSecret;
     private string $organizationId;
     private string $environment;
     private ?ClientInterface $httpClient;
@@ -30,6 +31,7 @@ class PdfServicesConfig
      *
      * @param string $apiKey Adobe PDF Services API key
      * @param string $clientId Adobe client ID
+     * @param string $clientSecret Adobe client secret
      * @param string $organizationId Adobe organization ID
      * @param string $environment API environment ('production' or 'staging')
      * @param array $httpOptions Additional HTTP client options
@@ -37,12 +39,14 @@ class PdfServicesConfig
     public function __construct(
         string $apiKey,
         string $clientId,
+        string $clientSecret,
         string $organizationId,
         string $environment = 'production',
         array $httpOptions = []
     ) {
         $this->apiKey = $apiKey;
         $this->clientId = $clientId;
+        $this->clientSecret = $clientSecret;
         $this->organizationId = $organizationId;
         $this->environment = $environment;
         $this->httpOptions = $httpOptions;
@@ -69,6 +73,16 @@ class PdfServicesConfig
     public function getClientId(): string
     {
         return $this->clientId;
+    }
+
+    /**
+     * Get the client secret
+     *
+     * @return string
+     */
+    public function getClientSecret(): string
+    {
+        return $this->clientSecret;
     }
 
     /**
@@ -201,6 +215,7 @@ class PdfServicesConfig
         return new self(
             getenv('GRIM_REAPPER_PDF_SERVICES_API_KEY') ?: '',
             getenv('GRIM_REAPPER_PDF_SERVICES_CLIENT_ID') ?: '',
+            getenv('GRIM_REAPPER_PDF_SERVICES_CLIENT_SECRET') ?: '',
             getenv('GRIM_REAPPER_PDF_SERVICES_ORGANIZATION_ID') ?: '',
             getenv('GRIM_REAPPER_PDF_SERVICES_ENVIRONMENT') ?: 'production'
         );
