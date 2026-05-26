@@ -68,8 +68,8 @@ class PdfCreationService extends AbstractService
         if (isset($options['format']) && !isset($pageLayout['pageWidth'])) {
             $formats = [
                 'A4' => ['width' => 8.27, 'height' => 11.69],
-                'Letter' => ['width' => 8.5, 'height' => 11],
-                'Legal' => ['width' => 8.5, 'height' => 14],
+                'LETTER' => ['width' => 8.5, 'height' => 11],
+                'LEGAL' => ['width' => 8.5, 'height' => 14],
                 'A3' => ['width' => 11.69, 'height' => 16.54],
             ];
 
@@ -80,10 +80,29 @@ class PdfCreationService extends AbstractService
             }
         }
 
+        // Map margins
+        if (isset($options['margin']) && is_array($options['margin'])) {
+            $margins = [];
+            foreach (['top', 'bottom', 'left', 'right'] as $side) {
+                if (isset($options['margin'][$side])) {
+                    $val = $options['margin'][$side];
+                    // Convert "1in" to float 1.0
+                    if (is_string($val) && str_ends_with(strtolower($val), 'in')) {
+                        $val = (float)substr($val, 0, -2);
+                    }
+                    $margins[$side] = (float)$val;
+                }
+            }
+            if (!empty($margins)) {
+                $pageLayout['margins'] = $margins;
+            }
+        }
+
         if (!empty($pageLayout)) {
             $requestData['pageLayout'] = $pageLayout;
         }
 
+        $this->log('debug', 'Submitting HTML to PDF job', ['request_data' => $requestData]);
         $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');

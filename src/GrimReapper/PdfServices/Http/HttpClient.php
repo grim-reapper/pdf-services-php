@@ -143,7 +143,7 @@ class HttpClient
                 return $this->makeCurlRequest($method, $url, $data, $headers);
             }
         } catch (ApiException $e) {
-            if ($e->getHttpCode() === 400) {
+            if ($e->getCode() === 400) {
                 $this->log('error', "Bad Request (400) details", [
                     'url' => $url,
                     'method' => $method,
