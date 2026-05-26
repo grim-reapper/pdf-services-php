@@ -122,4 +122,84 @@ class PageManipulationService extends AbstractService
             strlen($content)
         );
     }
+
+    /**
+     * Insert pages from a source document into a base document
+     *
+     * @param Document $baseDocument The document to insert into
+     * @param Document $sourceDocument The document to insert from
+     * @param int $atPage The page number in the base document to insert after (0 for beginning)
+     * @param array $pageRanges Page ranges from the source document
+     * @return Document
+     */
+    public function insertPages(Document $baseDocument, Document $sourceDocument, int $atPage, array $pageRanges = [['start' => 1, 'end' => -1]]): Document
+    {
+        $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
+        $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
+
+        $requestData = [
+            'assetID' => $baseAsset['assetID'],
+            'pageActions' => [
+                [
+                    'insert' => [
+                        'inputAssetID' => $sourceAsset['assetID'],
+                        'at' => $atPage,
+                        'pageRanges' => $pageRanges
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $content = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($content),
+            'application/pdf',
+            'inserted.pdf',
+            strlen($content)
+        );
+    }
+
+    /**
+     * Replace pages in a base document with pages from a source document
+     *
+     * @param Document $baseDocument The document to replace pages in
+     * @param array $basePageRanges Page ranges in the base document to be replaced
+     * @param Document $sourceDocument The document to take replacement pages from
+     * @param array $sourcePageRanges Page ranges from the source document
+     * @return Document
+     */
+    public function replacePages(Document $baseDocument, array $basePageRanges, Document $sourceDocument, array $sourcePageRanges = [['start' => 1, 'end' => -1]]): Document
+    {
+        $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
+        $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
+
+        $requestData = [
+            'assetID' => $baseAsset['assetID'],
+            'pageActions' => [
+                [
+                    'replace' => [
+                        'inputAssetID' => $sourceAsset['assetID'],
+                        'pageRanges' => $basePageRanges,
+                        'sourcePageRanges' => $sourcePageRanges
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $content = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($content),
+            'application/pdf',
+            'replaced.pdf',
+            strlen($content)
+        );
+    }
 }

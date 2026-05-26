@@ -34,10 +34,9 @@ class PdfSplitService extends AbstractService
         $content = file_get_contents($filePath);
         $asset = $this->uploadAsset($content, 'application/pdf');
 
-        $data = [
-            'assetID' => $asset['assetID'],
-            'options' => $options
-        ];
+        $data = array_merge([
+            'assetID' => $asset['assetID']
+        ], $options);
 
         $response = $this->makeRequest('POST', '/operation/splitpdf', $data);
         $jobResult = $this->pollJob($response['location']);

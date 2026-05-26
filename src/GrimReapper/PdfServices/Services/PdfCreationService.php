@@ -154,4 +154,64 @@ class PdfCreationService extends AbstractService
             strlen($content)
         );
     }
+
+    /**
+     * Create a PDF from an image file
+     *
+     * @param string $filePath Path to the image file
+     * @return Document The created PDF document
+     */
+    public function imageToPdf(string $filePath): Document
+    {
+        return $this->fromFile($filePath);
+    }
+
+    /**
+     * Create a PDF from a supported file (Word, Excel, PowerPoint, Image, Text)
+     *
+     * @param string $filePath Path to the file
+     * @return Document The created PDF document
+     */
+    public function fromFile(string $filePath): Document
+    {
+        $this->validateFile($filePath);
+        $content = file_get_contents($filePath);
+
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'txt' => 'text/plain',
+            'rtf' => 'application/rtf',
+            'bmp' => 'image/bmp',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'tiff' => 'image/tiff',
+            'png' => 'image/png',
+        ];
+
+        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+        $asset = $this->uploadAsset($content, $mimeType);
+
+        $requestData = [
+            'assetID' => $asset['assetID']
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/createpdf', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($resultContent),
+            'application/pdf',
+            'document.pdf',
+            strlen($resultContent)
+        );
+    }
 }
