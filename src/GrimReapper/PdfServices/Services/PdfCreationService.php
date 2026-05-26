@@ -51,7 +51,7 @@ class PdfCreationService extends AbstractService
         // Note: htmltopdf is strict and only supports specific keys.
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => $options['json'] ?? '{}',
+            'json' => is_array($options['json'] ?? null) ? json_encode($options['json']) : ($options['json'] ?? '{}'),
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
@@ -114,8 +114,8 @@ class PdfCreationService extends AbstractService
     public function fromUrl(string $url, array $options = []): Document
     {
         $requestData = [
-            'inputURL' => $url,
-            'json' => $options['json'] ?? '{}',
+            'inputUrl' => $url,
+            'json' => is_array($options['json'] ?? null) ? json_encode($options['json']) : ($options['json'] ?? '{}'),
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
