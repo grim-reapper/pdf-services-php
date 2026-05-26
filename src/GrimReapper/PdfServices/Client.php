@@ -21,6 +21,12 @@ use GrimReapper\PdfServices\Services\MetadataService;
 use GrimReapper\PdfServices\Services\SignatureService;
 use GrimReapper\PdfServices\Services\ComparisonService;
 use GrimReapper\PdfServices\Services\BatchProcessorService;
+use GrimReapper\PdfServices\Services\WatermarkService;
+use GrimReapper\PdfServices\Services\AccessibilityService;
+use GrimReapper\PdfServices\Services\MarkdownService;
+use GrimReapper\PdfServices\Services\LinearizeService;
+use GrimReapper\PdfServices\Services\DocumentGenerationService;
+use GrimReapper\PdfServices\Services\ExtractService;
 use GrimReapper\Contracts\PdfServicesInterface;
 
 /**
@@ -159,9 +165,69 @@ class Client implements PdfServicesInterface
      *
      * @return FormService
      */
-    public function extract(): FormService
+    public function forms(): FormService
     {
         return $this->getService(FormService::class);
+    }
+
+    /**
+     * Get the extraction service
+     *
+     * @return ExtractService
+     */
+    public function extract(): ExtractService
+    {
+        return $this->getService(ExtractService::class);
+    }
+
+    /**
+     * Get the watermark service
+     *
+     * @return WatermarkService
+     */
+    public function watermark(): WatermarkService
+    {
+        return $this->getService(WatermarkService::class);
+    }
+
+    /**
+     * Get the accessibility service
+     *
+     * @return AccessibilityService
+     */
+    public function accessibility(): AccessibilityService
+    {
+        return $this->getService(AccessibilityService::class);
+    }
+
+    /**
+     * Get the markdown service
+     *
+     * @return MarkdownService
+     */
+    public function markdown(): MarkdownService
+    {
+        return $this->getService(MarkdownService::class);
+    }
+
+    /**
+     * Get the linearization service
+     *
+     * @return LinearizeService
+     */
+    public function linearize(): LinearizeService
+    {
+        return $this->getService(LinearizeService::class);
+    }
+
+    /**
+     * Get the document generation service
+     *
+     * @return DocumentGenerationService
+     */
+    public function documentGeneration(): DocumentGenerationService
+    {
+        return $this->getService(DocumentGenerationService::class);
     }
 
     /**

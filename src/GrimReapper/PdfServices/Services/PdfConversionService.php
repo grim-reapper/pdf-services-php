@@ -49,6 +49,63 @@ class PdfConversionService extends AbstractService
     }
 
     /**
+     * Export a PDF file to another format (DOCX, XLSX, PPTX, RTF, JPEG, PNG)
+     *
+     * @param string $filePath Path to the PDF file
+     * @param string $targetFormat Target format (docx, xlsx, pptx, rtf, jpeg, png)
+     * @return Document|array A single Document or an array of Documents (for images)
+     */
+    public function export(string $filePath, string $targetFormat = 'docx'): Document|array
+    {
+        $this->validateFile($filePath);
+        $content = file_get_contents($filePath);
+        $asset = $this->uploadAsset($content, 'application/pdf');
+
+        $targetFormat = strtolower($targetFormat);
+        $data = [
+            'assetID' => $asset['assetID'],
+            'targetFormat' => $targetFormat
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/exportpdf', $data);
+        $jobResult = $this->pollJob($response['location']);
+
+        $mimeMap = [
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'rtf'  => 'application/rtf',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png'
+        ];
+
+        if (in_array($targetFormat, ['jpeg', 'png'])) {
+            $assetsData = $this->getResultData($jobResult, 'assets');
+            $results = [];
+            foreach ($assetsData as $i => $assetData) {
+                $resultContent = $this->httpClient->download($assetData['downloadUri']);
+                $results[] = new Document(
+                    base64_encode($resultContent),
+                    $mimeMap[$targetFormat] ?? 'application/octet-stream',
+                    "output_{$i}.{$targetFormat}",
+                    strlen($resultContent)
+                );
+            }
+            return $results;
+        }
+
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($resultContent),
+            $mimeMap[$targetFormat] ?? 'application/octet-stream',
+            "output.{$targetFormat}",
+            strlen($resultContent)
+        );
+    }
+
+    /**
      * Convert a PDF file to DOCX
      *
      * @param string $filePath Path to the PDF file
@@ -56,25 +113,7 @@ class PdfConversionService extends AbstractService
      */
     public function pdfToDocx(string $filePath): Document
     {
-        $this->validateFile($filePath);
-        $content = file_get_contents($filePath);
-        $asset = $this->uploadAsset($content, 'application/pdf');
-
-        $data = [
-            'assetID' => $asset['assetID'],
-            'targetFormat' => 'docx'
-        ];
-        $response = $this->makeRequest('POST', '/operation/exportpdf', $data);
-        $jobResult = $this->pollJob($response['location']);
-        $assetData = $this->getResultData($jobResult, 'asset');
-        $resultContent = $this->httpClient->download($assetData['downloadUri']);
-
-        return new Document(
-            base64_encode($resultContent),
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'output.docx',
-            strlen($resultContent)
-        );
+        return $this->export($filePath, 'docx');
     }
 
     /**
@@ -121,7 +160,7 @@ class PdfConversionService extends AbstractService
         $data = ['assetID' => $asset['assetID']];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
 
-        return new Job($response['location'], 'in_progress');
+        return Job::fromApiResponse($response);
     }
 
     /**
@@ -133,7 +172,7 @@ class PdfConversionService extends AbstractService
     public function getJobStatus(string $jobId): Job
     {
         $response = $this->httpClient->request('GET', $jobId, [], [], true);
-        return Job::fromApiResponse($response);
+        return Job::fromApiResponse($response, $jobId);
     }
 
     /**

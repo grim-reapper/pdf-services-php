@@ -41,7 +41,7 @@ class ServiceIntegrationTest extends TestCase
         $this->assertInstanceOf(CompressionService::class, $this->client->compress());
         $this->assertInstanceOf(SecurityService::class, $this->client->secure());
         $this->assertInstanceOf(AnnotationService::class, $this->client->annotate());
-        $this->assertInstanceOf(FormService::class, $this->client->extract());
+        $this->assertInstanceOf(FormService::class, $this->client->forms());
         $this->assertInstanceOf(MetadataService::class, $this->client->metadata());
         $this->assertInstanceOf(SignatureService::class, $this->client->signature());
         $this->assertInstanceOf(ComparisonService::class, $this->client->compare());
@@ -58,7 +58,7 @@ class ServiceIntegrationTest extends TestCase
         $this->assertEquals('compresspdf', $this->client->compress()->getServiceName());
         $this->assertEquals('protectpdf', $this->client->secure()->getServiceName());
         $this->assertEquals('pdf-annotations', $this->client->annotate()->getServiceName());
-        $this->assertEquals('form-data-extraction', $this->client->extract()->getServiceName());
+        $this->assertEquals('form-data-extraction', $this->client->forms()->getServiceName());
         $this->assertEquals('pdfproperties', $this->client->metadata()->getServiceName());
         $this->assertEquals('signature', $this->client->signature()->getServiceName());
         $this->assertEquals('comparepdf', $this->client->compare()->getServiceName());

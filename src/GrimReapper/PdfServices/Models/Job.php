@@ -157,9 +157,10 @@ class Job
      * Create job from API response
      *
      * @param array $response The API response
+     * @param string|null $jobId Optional jobId if not in response
      * @return self
      */
-    public static function fromApiResponse(array $response): self
+    public static function fromApiResponse(array $response, ?string $jobId = null): self
     {
         $createdAt = isset($response['created']) ? new DateTime($response['created']) : null;
         $updatedAt = isset($response['modified']) ? new DateTime($response['modified']) : null;
@@ -178,7 +179,7 @@ class Job
         }
 
         return new self(
-            $response['jobId'] ?? $response['location'] ?? '',
+            $response['jobID'] ?? $response['jobId'] ?? $response['location'] ?? $jobId ?? '',
             $response['status'] ?? 'in_progress',
             $createdAt,
             $updatedAt,

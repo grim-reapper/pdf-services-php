@@ -24,6 +24,7 @@ class PdfServicesConfig
     private ?RequestFactoryInterface $requestFactory;
     private ?StreamFactoryInterface $streamFactory;
     private array $httpOptions;
+    private array $notifiers = [];
 
     /**
      * Create a new PDF Services configuration
@@ -189,6 +190,28 @@ class PdfServicesConfig
     {
         $this->httpOptions = $httpOptions;
         return $this;
+    }
+
+    /**
+     * Set notifiers for job completion
+     *
+     * @param array $notifiers
+     * @return self
+     */
+    public function setNotifiers(array $notifiers): self
+    {
+        $this->notifiers = $notifiers;
+        return $this;
+    }
+
+    /**
+     * Get notifiers
+     *
+     * @return array
+     */
+    public function getNotifiers(): array
+    {
+        return $this->notifiers;
     }
 
     /**

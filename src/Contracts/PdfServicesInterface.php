@@ -19,6 +19,12 @@ use GrimReapper\PdfServices\Services\MetadataService;
 use GrimReapper\PdfServices\Services\SignatureService;
 use GrimReapper\PdfServices\Services\ComparisonService;
 use GrimReapper\PdfServices\Services\BatchProcessorService;
+use GrimReapper\PdfServices\Services\WatermarkService;
+use GrimReapper\PdfServices\Services\AccessibilityService;
+use GrimReapper\PdfServices\Services\MarkdownService;
+use GrimReapper\PdfServices\Services\LinearizeService;
+use GrimReapper\PdfServices\Services\DocumentGenerationService;
+use GrimReapper\PdfServices\Services\ExtractService;
 
 /**
  * Interface for PDF Services client
@@ -68,6 +74,48 @@ interface PdfServicesInterface
     public function ocr(): OcrService;
 
     /**
+     * Get the extraction service
+     *
+     * @return ExtractService
+     */
+    public function extract(): ExtractService;
+
+    /**
+     * Get the watermark service
+     *
+     * @return WatermarkService
+     */
+    public function watermark(): WatermarkService;
+
+    /**
+     * Get the accessibility service
+     *
+     * @return AccessibilityService
+     */
+    public function accessibility(): AccessibilityService;
+
+    /**
+     * Get the markdown service
+     *
+     * @return MarkdownService
+     */
+    public function markdown(): MarkdownService;
+
+    /**
+     * Get the linearization service
+     *
+     * @return LinearizeService
+     */
+    public function linearize(): LinearizeService;
+
+    /**
+     * Get the document generation service
+     *
+     * @return DocumentGenerationService
+     */
+    public function documentGeneration(): DocumentGenerationService;
+
+    /**
      * Get the compression service
      *
      * @return CompressionService
@@ -93,7 +141,7 @@ interface PdfServicesInterface
      *
      * @return FormService
      */
-    public function extract(): FormService;
+    public function forms(): FormService;
 
     /**
      * Get the metadata service

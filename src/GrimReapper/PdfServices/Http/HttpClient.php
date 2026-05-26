@@ -103,6 +103,11 @@ class HttpClient
         $isAdobeApi = strpos($url, 'adobe.io') !== false;
         $isAuthRequest = strpos($url, 'adobelogin.com') !== false;
 
+        // Validate URL
+        if (empty($url)) {
+            throw new ApiException('HTTP request failed: URL cannot be empty');
+        }
+
         // Prepare headers
         $defaultHeaders = [
             'Accept' => 'application/json',
@@ -237,13 +242,27 @@ class HttpClient
      */
     private function makeCurlRequest(string $method, string $url, mixed $data, array $headers): array
     {
+        if (empty($url)) {
+            throw new ApiException('HTTP request failed: URL cannot be empty. This often happens when a Job ID or Location header was not received from a previous request.');
+        }
+
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $this->formatHeaders($headers));
-        curl_setopt($ch, CURLOPT_HEADER, true); // Include headers in output
+
+        // Capture headers via a callback for more reliability
+        $responseHeaders = [];
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$responseHeaders) {
+            $len = strlen($header);
+            $parts = explode(':', $header, 2);
+            if (count($parts) >= 2) {
+                $responseHeaders[strtolower(trim($parts[0]))] = trim($parts[1]);
+            }
+            return $len;
+        });
 
         if (!empty($data)) {
             $body = is_array($data) ? json_encode($data) : $data;
@@ -255,27 +274,20 @@ class HttpClient
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 
-        $response = curl_exec($ch);
+        $body = curl_exec($ch);
 
-        if ($response === false) {
+        if ($body === false) {
             $error = curl_error($ch);
             curl_close($ch);
             throw new ApiException('cURL error: ' . $error);
         }
 
-        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        $headerStr = substr((string)$response, 0, $headerSize);
-        $body = substr((string)$response, $headerSize);
-
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        $location = null;
-        if (preg_match('/Location: (.*)/i', $headerStr, $matches)) {
-            $location = trim($matches[1]);
-        }
+        $location = $responseHeaders['location'] ?? null;
 
-        return $this->handleResponse($statusCode, $body, $location);
+        return $this->handleResponse($statusCode, (string)$body, $location);
     }
 
     /**
@@ -294,14 +306,16 @@ class HttpClient
             'body' => $statusCode >= 400 ? $responseBody : 'truncated'
         ]);
 
-        $data = json_decode($responseBody, true);
-        if ($location && is_array($data)) {
+        $data = json_decode($responseBody, true) ?: [];
+        if ($location) {
+            // Some Adobe APIs return relative paths in Location header
+            if (!str_starts_with($location, 'http')) {
+                $location = $this->config->getBaseUrl() . $location;
+            }
             $data['location'] = $location;
-        } elseif ($location) {
-            $data = ['location' => $location];
         }
 
-        $errorData = $data ?: $responseBody;
+        $errorData = !empty($data) ? $data : $responseBody;
 
         if ($statusCode === 401) {
             throw AuthenticationException::fromApiError($errorData, $statusCode);
