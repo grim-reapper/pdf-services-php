@@ -75,4 +75,63 @@ class FormService extends AbstractService
             strlen($resultContent)
         );
     }
+
+    /**
+     * Export form data from a PDF
+     *
+     * @param Document $document
+     * @param string $format 'json' or 'xfdf'
+     * @return array|string
+     */
+    public function exportFormData(Document $document, string $format = 'json'): array|string
+    {
+        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+
+        $requestData = [
+            'assetID' => $asset['assetID'],
+            'targetFormat' => $format
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/exportpdfformdata', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $contentData = $this->getResultData($jobResult, 'content');
+        $resultContent = $this->httpClient->download($contentData['downloadUri']);
+
+        if ($format === 'json') {
+            return json_decode($resultContent, true);
+        }
+
+        return $resultContent;
+    }
+
+    /**
+     * Import form data into a PDF
+     *
+     * @param Document $document
+     * @param string $formData Raw XFDF or JSON data
+     * @param string $format 'json' or 'xfdf'
+     * @return Document
+     */
+    public function importFormData(Document $document, string $formData, string $format = 'json'): Document
+    {
+        $pdfAsset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $dataAsset = $this->uploadAsset($formData, $format === 'json' ? 'application/json' : 'application/vnd.adobe.xfdf');
+
+        $requestData = [
+            'assetID' => $pdfAsset['assetID'],
+            'formDataAssetID' => $dataAsset['assetID']
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/importpdfformdata', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $resultContent = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($resultContent),
+            'application/pdf',
+            'imported.pdf',
+            strlen($resultContent)
+        );
+    }
 }

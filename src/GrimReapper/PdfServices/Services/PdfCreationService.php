@@ -51,12 +51,9 @@ class PdfCreationService extends AbstractService
         // Note: htmltopdf is strict and only supports specific keys.
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => $options['json'] ?? '{}'
+            'json' => $options['json'] ?? '{}',
+            'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
-
-        if (isset($options['includeHeaderFooter'])) {
-            $requestData['includeHeaderFooter'] = (bool)$options['includeHeaderFooter'];
-        }
 
         if (isset($options['waitTimeToLoad'])) {
             $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
@@ -94,6 +91,57 @@ class PdfCreationService extends AbstractService
         }
 
         $this->log('debug', 'Submitting HTML to PDF job', ['request_data' => $requestData]);
+        $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
+        $jobResult = $this->pollJob($response['location']);
+        $assetData = $this->getResultData($jobResult, 'asset');
+        $content = $this->httpClient->download($assetData['downloadUri']);
+
+        return new Document(
+            base64_encode($content),
+            'application/pdf',
+            'document.pdf',
+            strlen($content)
+        );
+    }
+
+    /**
+     * Create a PDF from a URL
+     *
+     * @param string $url The URL to convert
+     * @param array $options Creation options
+     * @return Document The created PDF document
+     */
+    public function fromUrl(string $url, array $options = []): Document
+    {
+        $requestData = [
+            'inputURL' => $url,
+            'json' => $options['json'] ?? '{}',
+            'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
+        ];
+
+        if (isset($options['waitTimeToLoad'])) {
+            $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
+        }
+
+        // Handle pageLayout mapping
+        $pageLayout = [];
+        if (isset($options['format'])) {
+            $formats = [
+                'A4' => ['width' => 8.27, 'height' => 11.69],
+                'LETTER' => ['width' => 8.5, 'height' => 11],
+            ];
+            $format = strtoupper((string)$options['format']);
+            if (isset($formats[$format])) {
+                $pageLayout['pageWidth'] = $formats[$format]['width'];
+                $pageLayout['pageHeight'] = $formats[$format]['height'];
+            }
+        }
+
+        if (!empty($pageLayout)) {
+            $requestData['pageLayout'] = $pageLayout;
+        }
+
+        $this->log('debug', 'Submitting URL to PDF job', ['request_data' => $requestData]);
         $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');

@@ -223,13 +223,14 @@ abstract class AbstractService implements ServiceInterface
             }
 
             if ($status === 'failed') {
-                throw new \RuntimeException('Job failed: ' . json_encode($response['error'] ?? 'Unknown error'));
+                $error = $response['error'] ?? 'Unknown error';
+                throw PdfServicesException::fromApiError($error, 400);
             }
 
             sleep(2);
         }
 
-        throw new \RuntimeException('Job timed out');
+        throw new ApiException('Job timed out', 408);
     }
 
     /**

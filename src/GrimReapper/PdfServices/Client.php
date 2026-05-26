@@ -11,6 +11,7 @@ use GrimReapper\PdfServices\Services\PdfCreationService;
 use GrimReapper\PdfServices\Services\PdfConversionService;
 use GrimReapper\PdfServices\Services\PdfMergeService;
 use GrimReapper\PdfServices\Services\PdfSplitService;
+use GrimReapper\PdfServices\Services\PageManipulationService;
 use GrimReapper\PdfServices\Services\OcrService;
 use GrimReapper\PdfServices\Services\CompressionService;
 use GrimReapper\PdfServices\Services\SecurityService;
@@ -46,6 +47,16 @@ class Client implements PdfServicesInterface
         $this->httpClient = new HttpClient($config);
         $this->authService = new AuthService($config);
         $this->httpClient->setAuthService($this->authService);
+    }
+
+    /**
+     * Get the page manipulation service
+     *
+     * @return PageManipulationService
+     */
+    public function pageManipulation(): PageManipulationService
+    {
+        return $this->getService(PageManipulationService::class);
     }
 
     /**
