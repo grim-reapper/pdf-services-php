@@ -142,7 +142,17 @@ class HttpClient
             } else {
                 return $this->makeCurlRequest($method, $url, $data, $headers);
             }
-        } catch (AuthenticationException|ApiException $e) {
+        } catch (ApiException $e) {
+            if ($e->getHttpCode() === 400) {
+                $this->log('error', "Bad Request (400) details", [
+                    'url' => $url,
+                    'method' => $method,
+                    'request_data' => is_array($data) ? $data : 'binary',
+                    'error_details' => $e->getDetails()
+                ]);
+            }
+            throw $e;
+        } catch (AuthenticationException $e) {
             $this->log('error', 'API error', [
                 'method' => $method,
                 'url' => $url,
@@ -210,17 +220,10 @@ class HttpClient
         $response = $this->psrClient->sendRequest($request);
 
         $statusCode = $response->getStatusCode();
-        // Check for Location header (common in asynchronous APIs)
-        if ($statusCode === 201 || $statusCode === 202) {
-            $location = $response->getHeaderLine('Location');
-            if ($location) {
-                return ['location' => $location, 'status_code' => $statusCode];
-            }
-        }
-
+        $location = $response->getHeaderLine('Location');
         $responseBody = $response->getBody()->getContents();
 
-        return $this->handleResponse($statusCode, $responseBody);
+        return $this->handleResponse($statusCode, $responseBody, $location);
     }
 
     /**
@@ -267,13 +270,12 @@ class HttpClient
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($statusCode === 201 || $statusCode === 202) {
-            if (preg_match('/Location: (.*)/i', $headerStr, $matches)) {
-                return ['location' => trim($matches[1]), 'status_code' => $statusCode];
-            }
+        $location = null;
+        if (preg_match('/Location: (.*)/i', $headerStr, $matches)) {
+            $location = trim($matches[1]);
         }
 
-        return $this->handleResponse($statusCode, $body);
+        return $this->handleResponse($statusCode, $body, $location);
     }
 
     /**
@@ -281,15 +283,22 @@ class HttpClient
      *
      * @param int $statusCode The HTTP status code
      * @param string $responseBody The response body
+     * @param string|null $location The location header value
      * @return array The parsed response data
      * @throws ApiException
      * @throws AuthenticationException
      */
-    private function handleResponse(int $statusCode, string $responseBody): array
+    private function handleResponse(int $statusCode, string $responseBody, ?string $location = null): array
     {
         $this->log('debug', "Received response with status {$statusCode}");
 
         $data = json_decode($responseBody, true);
+        if ($location && is_array($data)) {
+            $data['location'] = $location;
+        } elseif ($location) {
+            $data = ['location' => $location];
+        }
+
         $errorData = $data ?: $responseBody;
 
         if ($statusCode === 401) {

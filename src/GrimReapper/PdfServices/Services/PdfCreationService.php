@@ -47,12 +47,44 @@ class PdfCreationService extends AbstractService
 
         $asset = $this->uploadAsset($content, $mediaType);
 
-        $data = array_merge([
+        // Map and filter options for Adobe API v2
+        $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
-        ], $options);
+            'json' => $options['json'] ?? '{}'
+        ];
 
-        $response = $this->makeRequest('POST', '/operation/htmltopdf', $data);
+        if (isset($options['includeHeaderFooter'])) {
+            $requestData['includeHeaderFooter'] = (bool)$options['includeHeaderFooter'];
+        }
+
+        if (isset($options['waitTimeToLoad'])) {
+            $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
+        }
+
+        // Handle pageLayout mapping
+        $pageLayout = $options['pageLayout'] ?? [];
+
+        // Map 'format' if present and pageLayout not already fully defined
+        if (isset($options['format']) && !isset($pageLayout['pageWidth'])) {
+            $formats = [
+                'A4' => ['width' => 8.27, 'height' => 11.69],
+                'Letter' => ['width' => 8.5, 'height' => 11],
+                'Legal' => ['width' => 8.5, 'height' => 14],
+                'A3' => ['width' => 11.69, 'height' => 16.54],
+            ];
+
+            $format = strtoupper($options['format']);
+            if (isset($formats[$format])) {
+                $pageLayout['pageWidth'] = $formats[$format]['width'];
+                $pageLayout['pageHeight'] = $formats[$format]['height'];
+            }
+        }
+
+        if (!empty($pageLayout)) {
+            $requestData['pageLayout'] = $pageLayout;
+        }
+
+        $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $content = $this->httpClient->download($assetData['downloadUri']);

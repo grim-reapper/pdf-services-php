@@ -242,26 +242,46 @@ abstract class AbstractService implements ServiceInterface
      */
     protected function getResultData(array $response, string $key): mixed
     {
-        // In API v2, results can be at top level or nested under 'result'
+        // 1. Prioritize top-level result types (v2 behavior)
+        $resultKeys = ['asset', 'assets', 'content', 'pdfProperties', 'diffReport', 'annotations'];
+        foreach ($resultKeys as $rk) {
+            if ($key === $rk && isset($response[$rk])) {
+                return $response[$rk];
+            }
+        }
+
+        // 2. Try nested under 'result' (v1 and some v2 behavior)
+        if (isset($response['result']) && is_array($response['result'])) {
+            // Check direct key under result
+            if (isset($response['result'][$key])) {
+                return $response['result'][$key];
+            }
+
+            // If we are looking for 'asset' but it's under 'content' (common mapping)
+            if ($key === 'asset' && isset($response['result']['content'])) {
+                return $response['result']['content'];
+            }
+
+            // If result contains only ONE key, and it's one of the known result types
+            if (count($response['result']) === 1) {
+                $onlyKey = key($response['result']);
+                if (in_array($onlyKey, $resultKeys)) {
+                    return $response['result'][$onlyKey];
+                }
+            }
+        }
+
+        // 3. Fallback: if the key exists anywhere at top level
         if (isset($response[$key])) {
             return $response[$key];
         }
 
-        if (isset($response['result']) && is_array($response['result']) && isset($response['result'][$key])) {
-            return $response['result'][$key];
-        }
-
-        // Sometimes the key we want is the ONLY key under 'result'
-        if (isset($response['result']) && is_array($response['result']) && count($response['result']) === 1) {
-            return reset($response['result']);
-        }
-
-        // Fallback for exportPDF where result might be named differently but contains the asset
-        if ($key === 'asset' && isset($response['result']) && is_array($response['result'])) {
-            if (isset($response['result']['content'])) return $response['result']['content'];
-        }
-
         $this->log('error', "Missing '{$key}' in API response", ['response' => $response]);
-        throw new \RuntimeException("Missing '{$key}' in API response. Received keys: " . implode(', ', array_keys($response)));
+        $availableKeys = array_keys($response);
+        if (isset($response['result']) && is_array($response['result'])) {
+            $availableKeys = array_merge($availableKeys, array_map(fn($k) => "result.{$k}", array_keys($response['result'])));
+        }
+
+        throw new \RuntimeException("Missing '{$key}' in API response. Available keys: " . implode(', ', $availableKeys));
     }
 }
