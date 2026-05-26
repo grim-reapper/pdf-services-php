@@ -60,18 +60,17 @@ use GrimReapper\PdfServices\Models\Document;
 $creationService = $client->createPdf();
 
 // Create PDF from HTML
+// Note: Options are mapped to Adobe's pageLayout schema.
+// Dimensions are in inches.
+// Margins must be handled via CSS @page rules in the HTML content.
 $result = $creationService->fromHtml(
-    html: '<h1>Hello World</h1><p>This is a PDF created with Adobe PDF Services.</p>',
+    html: '<style>@page { margin: 1in; }</style><h1>Hello World</h1>',
     options: [
-        'format' => 'A4', // Maps to 8.27 x 11.69 inches
-        'margin' => [
-            'top' => 1.0,    // Dimensions in inches (float)
-            'bottom' => 1.0,
-            'left' => 1.0,
-            'right' => 1.0
-        ],
+        'format' => 'A4', // Convenience key, maps to 8.27 x 11.69 inches
         'includeHeaderFooter' => true,
-        'waitTimeToLoad' => 0
+        'waitTimeToLoad' => 0,
+        // Alternatively, use pageLayout directly:
+        // 'pageLayout' => ['pageWidth' => 8.5, 'pageHeight' => 11]
     ]
 );
 

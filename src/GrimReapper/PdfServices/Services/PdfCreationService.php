@@ -18,7 +18,7 @@ class PdfCreationService extends AbstractService
      */
     public function getServiceName(): string
     {
-        return 'createpdf';
+        return 'htmltopdf';
     }
 
     /**
@@ -47,7 +47,8 @@ class PdfCreationService extends AbstractService
 
         $asset = $this->uploadAsset($content, $mediaType);
 
-        // Map and filter options for Adobe API v2
+        // Map and filter options for Adobe API v2 (htmltopdf)
+        // Note: htmltopdf is strict and only supports specific keys.
         $requestData = [
             'assetID' => $asset['assetID'],
             'json' => $options['json'] ?? '{}'
@@ -61,11 +62,11 @@ class PdfCreationService extends AbstractService
             $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
         }
 
-        // Handle pageLayout mapping
+        // Handle pageLayout mapping (pageWidth and pageHeight in inches)
         $pageLayoutInput = $options['pageLayout'] ?? [];
         $pageLayout = [];
 
-        // Map 'format' if present
+        // Map convenience 'format' key if present
         if (isset($options['format'])) {
             $formats = [
                 'A4' => ['width' => 8.27, 'height' => 11.69],
@@ -85,24 +86,8 @@ class PdfCreationService extends AbstractService
         if (isset($pageLayoutInput['pageWidth'])) $pageLayout['pageWidth'] = (float)$pageLayoutInput['pageWidth'];
         if (isset($pageLayoutInput['pageHeight'])) $pageLayout['pageHeight'] = (float)$pageLayoutInput['pageHeight'];
 
-        // Map margins
-        $marginInput = $options['margin'] ?? $options['margins'] ?? null;
-        if (is_array($marginInput)) {
-            $margins = [];
-            foreach (['top', 'bottom', 'left', 'right'] as $side) {
-                if (isset($marginInput[$side])) {
-                    $val = $marginInput[$side];
-                    // Convert "1in" or "1.0" to float
-                    if (is_string($val)) {
-                        $val = str_replace(['in', ' '], '', strtolower($val));
-                    }
-                    $margins[$side] = (float)$val;
-                }
-            }
-            if (!empty($margins)) {
-                $pageLayout['margins'] = $margins;
-            }
-        }
+        // Note: v2 htmltopdf REST API does not support 'margins' in the JSON body.
+        // Margins must be defined via CSS @page rules in the HTML content itself.
 
         if (!empty($pageLayout)) {
             $requestData['pageLayout'] = $pageLayout;

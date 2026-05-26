@@ -50,7 +50,7 @@ class ServiceIntegrationTest extends TestCase
 
     public function testServiceNames(): void
     {
-        $this->assertEquals('createpdf', $this->client->createPdf()->getServiceName());
+        $this->assertEquals('htmltopdf', $this->client->createPdf()->getServiceName());
         $this->assertEquals('pdf-conversion', $this->client->convert()->getServiceName());
         $this->assertEquals('combinepdf', $this->client->merge()->getServiceName());
         $this->assertEquals('splitpdf', $this->client->split()->getServiceName());
