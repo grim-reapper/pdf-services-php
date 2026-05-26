@@ -63,8 +63,15 @@ $creationService = $client->createPdf();
 $result = $creationService->fromHtml(
     html: '<h1>Hello World</h1><p>This is a PDF created with Adobe PDF Services.</p>',
     options: [
-        'format' => 'A4',
-        'margin' => ['top' => '1in', 'bottom' => '1in', 'left' => '1in', 'right' => '1in']
+        'format' => 'A4', // Maps to 8.27 x 11.69 inches
+        'margin' => [
+            'top' => 1.0,    // Dimensions in inches (float)
+            'bottom' => 1.0,
+            'left' => 1.0,
+            'right' => 1.0
+        ],
+        'includeHeaderFooter' => true,
+        'waitTimeToLoad' => 0
     ]
 );
 
@@ -186,7 +193,11 @@ $guzzleClient = new GuzzleClient();
 $requestFactory = new HttpFactory();
 $streamFactory = new HttpFactory();
 
-$config = new PdfServicesConfig('api-key', 'client-id', 'org-id');
+$config = new PdfServicesConfig(
+    clientId: 'your-client-id',
+    clientSecret: 'your-client-secret',
+    organizationId: 'your-organization-id'
+);
 $config->setHttpClient($guzzleClient);
 $config->setRequestFactory($requestFactory);
 $config->setStreamFactory($streamFactory);

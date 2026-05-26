@@ -62,10 +62,11 @@ class PdfCreationService extends AbstractService
         }
 
         // Handle pageLayout mapping
-        $pageLayout = $options['pageLayout'] ?? [];
+        $pageLayoutInput = $options['pageLayout'] ?? [];
+        $pageLayout = [];
 
-        // Map 'format' if present and pageLayout not already fully defined
-        if (isset($options['format']) && !isset($pageLayout['pageWidth'])) {
+        // Map 'format' if present
+        if (isset($options['format'])) {
             $formats = [
                 'A4' => ['width' => 8.27, 'height' => 11.69],
                 'LETTER' => ['width' => 8.5, 'height' => 11],
@@ -73,22 +74,27 @@ class PdfCreationService extends AbstractService
                 'A3' => ['width' => 11.69, 'height' => 16.54],
             ];
 
-            $format = strtoupper($options['format']);
+            $format = strtoupper((string)$options['format']);
             if (isset($formats[$format])) {
                 $pageLayout['pageWidth'] = $formats[$format]['width'];
                 $pageLayout['pageHeight'] = $formats[$format]['height'];
             }
         }
 
+        // Explicit pageWidth/pageHeight overrides format
+        if (isset($pageLayoutInput['pageWidth'])) $pageLayout['pageWidth'] = (float)$pageLayoutInput['pageWidth'];
+        if (isset($pageLayoutInput['pageHeight'])) $pageLayout['pageHeight'] = (float)$pageLayoutInput['pageHeight'];
+
         // Map margins
-        if (isset($options['margin']) && is_array($options['margin'])) {
+        $marginInput = $options['margin'] ?? $options['margins'] ?? null;
+        if (is_array($marginInput)) {
             $margins = [];
             foreach (['top', 'bottom', 'left', 'right'] as $side) {
-                if (isset($options['margin'][$side])) {
-                    $val = $options['margin'][$side];
-                    // Convert "1in" to float 1.0
-                    if (is_string($val) && str_ends_with(strtolower($val), 'in')) {
-                        $val = (float)substr($val, 0, -2);
+                if (isset($marginInput[$side])) {
+                    $val = $marginInput[$side];
+                    // Convert "1in" or "1.0" to float
+                    if (is_string($val)) {
+                        $val = str_replace(['in', ' '], '', strtolower($val));
                     }
                     $margins[$side] = (float)$val;
                 }

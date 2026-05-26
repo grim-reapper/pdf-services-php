@@ -290,7 +290,9 @@ class HttpClient
      */
     private function handleResponse(int $statusCode, string $responseBody, ?string $location = null): array
     {
-        $this->log('debug', "Received response with status {$statusCode}");
+        $this->log('debug', "Received response with status {$statusCode}", [
+            'body' => $statusCode >= 400 ? $responseBody : 'truncated'
+        ]);
 
         $data = json_decode($responseBody, true);
         if ($location && is_array($data)) {
@@ -306,6 +308,7 @@ class HttpClient
         }
 
         if ($statusCode >= 400) {
+            $this->log('error', "API error response: {$responseBody}");
             throw ApiException::fromApiError($errorData, $statusCode);
         }
 
