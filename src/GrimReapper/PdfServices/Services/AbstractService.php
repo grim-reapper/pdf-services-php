@@ -242,16 +242,26 @@ abstract class AbstractService implements ServiceInterface
      */
     protected function getResultData(array $response, string $key): mixed
     {
-        // Try top-level
+        // In API v2, results can be at top level or nested under 'result'
         if (isset($response[$key])) {
             return $response[$key];
         }
 
-        // Try under 'result'
-        if (isset($response['result']) && isset($response['result'][$key])) {
+        if (isset($response['result']) && is_array($response['result']) && isset($response['result'][$key])) {
             return $response['result'][$key];
         }
 
-        throw new \RuntimeException("Missing '{$key}' in API response: " . json_encode($response));
+        // Sometimes the key we want is the ONLY key under 'result'
+        if (isset($response['result']) && is_array($response['result']) && count($response['result']) === 1) {
+            return reset($response['result']);
+        }
+
+        // Fallback for exportPDF where result might be named differently but contains the asset
+        if ($key === 'asset' && isset($response['result']) && is_array($response['result'])) {
+            if (isset($response['result']['content'])) return $response['result']['content'];
+        }
+
+        $this->log('error', "Missing '{$key}' in API response", ['response' => $response]);
+        throw new \RuntimeException("Missing '{$key}' in API response. Received keys: " . implode(', ', array_keys($response)));
     }
 }

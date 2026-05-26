@@ -30,14 +30,29 @@ class PdfCreationService extends AbstractService
      */
     public function fromHtml(string $html, array $options = []): Document
     {
-        $asset = $this->uploadAsset($html, 'text/html');
+        // Wrap HTML in a ZIP if it's just raw HTML content, as the API often requires
+        // a ZIP containing index.html and its resources.
+        $tempFile = tempnam(sys_get_temp_dir(), 'html') . '.zip';
+        $zip = new \ZipArchive();
+        if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
+            $zip->addFromString('index.html', $html);
+            $zip->close();
+            $content = file_get_contents($tempFile);
+            unlink($tempFile);
+            $mediaType = 'application/zip';
+        } else {
+            $content = $html;
+            $mediaType = 'text/html';
+        }
 
-        $data = [
+        $asset = $this->uploadAsset($content, $mediaType);
+
+        $data = array_merge([
             'assetID' => $asset['assetID'],
-            'options' => $options
-        ];
+            'json' => '{}'
+        ], $options);
 
-        $response = $this->makeRequest('POST', '/operation/createpdf', $data);
+        $response = $this->makeRequest('POST', '/operation/htmltopdf', $data);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $content = $this->httpClient->download($assetData['downloadUri']);
