@@ -35,8 +35,7 @@ class PdfConversionService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
         $jobResult = $this->pollJob($response['location']);
@@ -67,8 +66,7 @@ class PdfConversionService extends AbstractService
         $targetFormat = strtolower($targetFormat);
         $data = [
             'assetID' => $asset['assetID'],
-            'targetFormat' => $targetFormat,
-            'json' => '{}'
+            'targetFormat' => $targetFormat
         ];
 
         $response = $this->makeRequest('POST', '/operation/exportpdf', $data);
@@ -136,8 +134,7 @@ class PdfConversionService extends AbstractService
         $asset = $this->uploadAsset($content, $mediaType);
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
         $jobResult = $this->pollJob($response['location']);
@@ -165,8 +162,7 @@ class PdfConversionService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
         $response = $this->makeRequest('POST', '/operation/createpdf', $data);
 

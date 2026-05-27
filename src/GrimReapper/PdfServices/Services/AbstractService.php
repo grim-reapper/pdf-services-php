@@ -130,7 +130,8 @@ abstract class AbstractService implements ServiceInterface
             $this->log('error', 'API request failed', [
                 'service' => $this->getServiceName(),
                 'endpoint' => $endpoint,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'details' => $e->getDetails()
             ]);
             throw $e;
         } catch (PdfServicesException $e) {
@@ -237,52 +238,59 @@ abstract class AbstractService implements ServiceInterface
      * Get data from the response, handling different response structures
      *
      * @param array $response The API response
-     * @param string $key The data key
+     * @param string|array $key The data key or array of keys to try
+     * @param bool $silent Whether to suppress logging on failure
      * @return mixed The data
      * @throws \RuntimeException If the key is not found
      */
-    protected function getResultData(array $response, string $key): mixed
+    protected function getResultData(array $response, $key, bool $silent = false): mixed
     {
-        // 1. Prioritize top-level result types (v2 behavior)
-        $resultKeys = ['asset', 'assets', 'content', 'pdfProperties', 'diffReport', 'annotations'];
-        foreach ($resultKeys as $rk) {
-            if ($key === $rk && isset($response[$rk])) {
-                return $response[$rk];
+        $keys = (array)$key;
+
+        // 1. Check direct keys at top level (prioritize provided keys)
+        foreach ($keys as $k) {
+            if (isset($response[$k])) {
+                return $response[$k];
             }
         }
 
         // 2. Try nested under 'result' (v1 and some v2 behavior)
         if (isset($response['result']) && is_array($response['result'])) {
-            // Check direct key under result
-            if (isset($response['result'][$key])) {
-                return $response['result'][$key];
-            }
+            foreach ($keys as $k) {
+                // Check direct key under result
+                if (isset($response['result'][$k])) {
+                    return $response['result'][$k];
+                }
 
-            // If we are looking for 'asset' but it's under 'content' (common mapping)
-            if ($key === 'asset' && isset($response['result']['content'])) {
-                return $response['result']['content'];
+                // If we are looking for 'asset' but it's under 'content' (common mapping)
+                if ($k === 'asset' && isset($response['result']['content'])) {
+                    return $response['result']['content'];
+                }
             }
 
             // If result contains only ONE key, and it's one of the known result types
+            $resultKeys = ['asset', 'assets', 'content', 'pdfProperties', 'metadata', 'diffReport', 'annotations'];
             if (count($response['result']) === 1) {
-                $onlyKey = key($response['result']);
+                $onlyKey = (string)key($response['result']);
                 if (in_array($onlyKey, $resultKeys)) {
                     return $response['result'][$onlyKey];
                 }
             }
         }
 
-        // 3. Fallback: if the key exists anywhere at top level
-        if (isset($response[$key])) {
-            return $response[$key];
+        if (!$silent) {
+            $this->log('error', "Missing expected keys in API response", [
+                'expected_keys' => $keys,
+                'available_keys' => array_keys($response),
+                'response' => $response
+            ]);
         }
 
-        $this->log('error', "Missing '{$key}' in API response", ['response' => $response]);
         $availableKeys = array_keys($response);
         if (isset($response['result']) && is_array($response['result'])) {
             $availableKeys = array_merge($availableKeys, array_map(fn($k) => "result.{$k}", array_keys($response['result'])));
         }
 
-        throw new \RuntimeException("Missing '{$key}' in API response. Available keys: " . implode(', ', $availableKeys));
+        throw new \RuntimeException("Missing one of these keys: '" . implode(', ', $keys) . "' in API response. Available keys: " . implode(', ', $availableKeys));
     }
 }

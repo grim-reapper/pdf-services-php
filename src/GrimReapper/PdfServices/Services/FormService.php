@@ -34,8 +34,7 @@ class FormService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
 
         $response = $this->makeRequest('POST', '/operation/extractpdf', $data);
@@ -61,8 +60,7 @@ class FormService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'jsonFormFieldsData' => $fieldData,
-            'json' => '{}'
+            'jsonFormFieldsData' => $fieldData
         ];
 
         $response = $this->makeRequest('POST', '/operation/setformdata', $data);
@@ -91,8 +89,7 @@ class FormService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'targetFormat' => $format,
-            'json' => '{}'
+            'targetFormat' => $format
         ];
 
         $response = $this->makeRequest('POST', '/operation/exportpdfformdata', $requestData);
@@ -122,8 +119,7 @@ class FormService extends AbstractService
 
         $requestData = [
             'assetID' => $pdfAsset['assetID'],
-            'formDataAssetID' => $dataAsset['assetID'],
-            'json' => '{}'
+            'formDataAssetID' => $dataAsset['assetID']
         ];
 
         $response = $this->makeRequest('POST', '/operation/importpdfformdata', $requestData);

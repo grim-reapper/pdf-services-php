@@ -32,14 +32,13 @@ class MetadataService extends AbstractService
         $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        return $this->getResultData($jobResult, 'pdfProperties');
+        return $this->getResultData($jobResult, ['pdfProperties', 'metadata']);
     }
 
     /**
@@ -55,14 +54,30 @@ class MetadataService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
         $jobResult = $this->pollJob($response['location']);
 
-        return $this->getResultData($jobResult, 'pdfProperties');
+        return $this->getResultData($jobResult, ['pdfProperties', 'metadata']);
+    }
+
+    /**
+     * Helper to extract page count from metadata array
+     *
+     * @param array $metadata
+     * @return int
+     */
+    public static function extractPageCount(array $metadata): int
+    {
+        return $metadata['document']['pageCount']
+            ?? $metadata['document']['page_count']
+            ?? $metadata['pdf']['page_count']
+            ?? $metadata['pdf']['pageCount']
+            ?? $metadata['pageCount']
+            ?? $metadata['page_count']
+            ?? 0;
     }
 
     /**
@@ -74,9 +89,6 @@ class MetadataService extends AbstractService
      */
     public function setMetadata(string $filePath, array $metadata): Document
     {
-        // Adobe PDF Services doesn't have a direct 'set metadata' operation in v2.
-        // It's usually part of other operations or achieved via Document Generation.
-        // For now, we'll keep the structure but it might not be supported directly.
         throw new \BadMethodCallException('Setting metadata is not directly supported in PDF Services API v2');
     }
 }

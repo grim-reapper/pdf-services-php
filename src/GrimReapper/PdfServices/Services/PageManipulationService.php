@@ -35,8 +35,7 @@ class PageManipulationService extends AbstractService
                         'pageRanges' => $pageRanges
                     ]
                 ]
-            ],
-            'json' => '{}'
+            ]
         ];
 
         $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
@@ -73,8 +72,7 @@ class PageManipulationService extends AbstractService
                         'pageRanges' => $pageRanges
                     ]
                 ]
-            ],
-            'json' => '{}'
+            ]
         ];
 
         $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
@@ -107,8 +105,7 @@ class PageManipulationService extends AbstractService
                     'assetID' => $asset['assetID'],
                     'pageRanges' => $pageRanges
                 ]
-            ],
-            'json' => '{}'
+            ]
         ];
 
         $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);
@@ -140,7 +137,7 @@ class PageManipulationService extends AbstractService
 
         $metadataService = new MetadataService($this->config, $this->httpClient);
         $metadata = $metadataService->getMetadataFromDocument($baseDocument);
-        $totalPages = $metadata['document']['pageCount'] ?? $metadata['pageCount'] ?? 0;
+        $totalPages = MetadataService::extractPageCount($metadata);
 
         $assets = [];
 
@@ -168,8 +165,7 @@ class PageManipulationService extends AbstractService
         }
 
         $requestData = [
-            'assets' => $assets,
-            'json' => '{}'
+            'assets' => $assets
         ];
 
         $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);
@@ -201,7 +197,7 @@ class PageManipulationService extends AbstractService
 
         $metadataService = new MetadataService($this->config, $this->httpClient);
         $metadata = $metadataService->getMetadataFromDocument($baseDocument);
-        $totalPages = $metadata['document']['pageCount'] ?? $metadata['pageCount'] ?? 0;
+        $totalPages = MetadataService::extractPageCount($metadata);
 
         // Assuming first range for replacement logic
         $replaceRange = $basePageRanges[0] ?? ['start' => 1, 'end' => 1];
@@ -234,8 +230,7 @@ class PageManipulationService extends AbstractService
         }
 
         $requestData = [
-            'assets' => $assets,
-            'json' => '{}'
+            'assets' => $assets
         ];
 
         $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);

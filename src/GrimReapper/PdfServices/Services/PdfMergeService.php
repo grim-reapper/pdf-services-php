@@ -38,8 +38,7 @@ class PdfMergeService extends AbstractService
         }
 
         $data = [
-            'assets' => $assets,
-            'json' => '{}'
+            'assets' => $assets
         ];
 
         $response = $this->makeRequest('POST', '/operation/combinepdf', $data);

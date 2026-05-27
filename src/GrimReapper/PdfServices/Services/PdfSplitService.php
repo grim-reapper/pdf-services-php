@@ -36,8 +36,7 @@ class PdfSplitService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'splitoption' => $options,
-            'json' => '{}'
+            'splitoption' => $options
         ];
 
         $response = $this->makeRequest('POST', '/operation/splitpdf', $data);

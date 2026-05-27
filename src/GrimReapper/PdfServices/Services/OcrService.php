@@ -35,8 +35,7 @@ class OcrService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = array_merge([
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ], $options);
 
         $response = $this->makeRequest('POST', '/operation/ocr', $data);

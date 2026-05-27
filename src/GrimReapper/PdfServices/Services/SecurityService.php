@@ -38,8 +38,7 @@ class SecurityService extends AbstractService
             'assetID' => $asset['assetID'],
             'password' => $options['password'] ?? null,
             'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
-            'permissions' => $options['permissions'] ?? [],
-            'json' => '{}'
+            'permissions' => $options['permissions'] ?? []
         ];
 
         $response = $this->makeRequest('POST', '/operation/protectpdf', $data);
@@ -70,8 +69,7 @@ class SecurityService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'password' => $password,
-            'json' => '{}'
+            'password' => $password
         ];
 
         $response = $this->makeRequest('POST', '/operation/removeprotection', $data);

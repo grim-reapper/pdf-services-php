@@ -199,8 +199,7 @@ class PdfCreationService extends AbstractService
         $asset = $this->uploadAsset($content, $mimeType);
 
         $requestData = [
-            'assetID' => $asset['assetID'],
-            'json' => '{}'
+            'assetID' => $asset['assetID']
         ];
 
         $response = $this->makeRequest('POST', '/operation/createpdf', $requestData);
