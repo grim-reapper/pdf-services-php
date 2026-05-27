@@ -34,11 +34,42 @@ class SecurityService extends AbstractService
         $content = file_get_contents($filePath);
         $asset = $this->uploadAsset($content, 'application/pdf');
 
+        $protection = [];
+        if (isset($options['password'])) {
+            $protection['userPassword'] = $options['password'];
+        }
+
+        if (isset($options['ownerPassword'])) {
+            $protection['ownerPassword'] = $options['ownerPassword'];
+        }
+
+        // Map permission enums to Adobe API v2 expected values
+        $permissions = $options['permissions'] ?? [];
+        $mappedPermissions = [];
+        $permissionMap = [
+            'PRINT_LOW_RES' => 'PRINT_LOW_QUALITY',
+            'PRINT_HIGH_RES' => 'PRINT_HIGH_QUALITY',
+            'PRINT_LOW_QUALITY' => 'PRINT_LOW_QUALITY',
+            'PRINT_HIGH_QUALITY' => 'PRINT_HIGH_QUALITY',
+            'EDIT_CONTENT' => 'EDIT_CONTENT',
+            'COPY_CONTENT' => 'COPY_CONTENT',
+            'EDIT_ANNOTATIONS' => 'EDIT_ANNOTATIONS',
+            'EDIT_FORMS' => 'EDIT_FILL_AND_SIGN_FORM_FIELDS',
+            'EDIT_FILL_AND_SIGN_FORM_FIELDS' => 'EDIT_FILL_AND_SIGN_FORM_FIELDS',
+        ];
+
+        foreach ($permissions as $perm) {
+            $mappedPermissions[] = $permissionMap[strtoupper((string)$perm)] ?? $perm;
+        }
+
+        if (!empty($mappedPermissions)) {
+            $protection['permissions'] = $mappedPermissions;
+        }
+
         $data = [
             'assetID' => $asset['assetID'],
-            'password' => $options['password'] ?? null,
             'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
-            'permissions' => $options['permissions'] ?? []
+            'passwordProtection' => $protection
         ];
 
         $response = $this->makeRequest('POST', '/operation/protectpdf', $data);
