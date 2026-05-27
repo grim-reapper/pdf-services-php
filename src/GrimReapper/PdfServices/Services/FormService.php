@@ -60,7 +60,7 @@ class FormService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'data' => $fieldData
+            'jsonFormFieldsData' => $fieldData
         ];
 
         $response = $this->makeRequest('POST', '/operation/setformdata', $data);
