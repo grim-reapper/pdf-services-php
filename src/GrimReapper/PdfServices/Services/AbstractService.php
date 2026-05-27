@@ -247,6 +247,10 @@ abstract class AbstractService implements ServiceInterface
     {
         $keys = (array)$key;
 
+        // Add common synonyms to the search keys
+        if (in_array('assets', $keys) && !in_array('assetList', $keys)) $keys[] = 'assetList';
+        if (in_array('pdfProperties', $keys) && !in_array('metadata', $keys)) $keys[] = 'metadata';
+
         // 1. Check direct keys at top level (prioritize provided keys)
         foreach ($keys as $k) {
             if (isset($response[$k])) {
@@ -269,7 +273,7 @@ abstract class AbstractService implements ServiceInterface
             }
 
             // If result contains only ONE key, and it's one of the known result types
-            $resultKeys = ['asset', 'assets', 'content', 'pdfProperties', 'metadata', 'diffReport', 'annotations'];
+            $resultKeys = ['asset', 'assets', 'assetList', 'content', 'pdfProperties', 'metadata', 'diffReport', 'annotations'];
             if (count($response['result']) === 1) {
                 $onlyKey = (string)key($response['result']);
                 if (in_array($onlyKey, $resultKeys)) {

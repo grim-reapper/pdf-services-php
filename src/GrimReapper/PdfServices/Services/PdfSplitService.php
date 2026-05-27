@@ -41,7 +41,7 @@ class PdfSplitService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/splitpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $assetsData = $this->getResultData($jobResult, 'assets');
+        $assetsData = $this->getResultData($jobResult, ['assets', 'assetList']);
 
         $results = [];
         foreach ($assetsData as $assetData) {
