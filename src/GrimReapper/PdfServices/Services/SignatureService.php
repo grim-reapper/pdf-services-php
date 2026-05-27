@@ -36,7 +36,8 @@ class SignatureService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'options' => $options
+            'options' => $options,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
@@ -67,7 +68,8 @@ class SignatureService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'options' => $options
+            'options' => $options,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);

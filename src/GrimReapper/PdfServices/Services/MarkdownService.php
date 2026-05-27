@@ -34,7 +34,8 @@ class MarkdownService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $requestData = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdftomarkdown', $requestData);

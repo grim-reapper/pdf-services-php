@@ -36,7 +36,8 @@ class CompressionService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'compressionLevel' => $options['compressionLevel'] ?? 'MEDIUM'
+            'compressionLevel' => $options['compressionLevel'] ?? 'MEDIUM',
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/compresspdf', $data);

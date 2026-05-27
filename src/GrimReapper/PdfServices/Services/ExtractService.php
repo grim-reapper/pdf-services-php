@@ -37,7 +37,8 @@ class ExtractService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'elementsToExtract' => $elements
+            'elementsToExtract' => $elements,
+            'json' => '{}'
         ];
 
         if (isset($options['getCharBounds'])) $requestData['getCharBounds'] = (bool)$options['getCharBounds'];

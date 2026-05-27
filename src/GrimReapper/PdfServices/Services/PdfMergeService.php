@@ -37,7 +37,10 @@ class PdfMergeService extends AbstractService
             $assets[] = ['assetID' => $asset['assetID']];
         }
 
-        $data = ['assets' => $assets];
+        $data = [
+            'assets' => $assets,
+            'json' => '{}'
+        ];
 
         $response = $this->makeRequest('POST', '/operation/combinepdf', $data);
         $jobResult = $this->pollJob($response['location']);

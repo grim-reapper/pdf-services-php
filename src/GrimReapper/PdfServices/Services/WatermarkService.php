@@ -42,7 +42,8 @@ class WatermarkService extends AbstractService
 
         $requestData = [
             'inputDocumentAssetID' => $inputAsset['assetID'],
-            'watermarkDocumentAssetID' => $watermarkAsset['assetID']
+            'watermarkDocumentAssetID' => $watermarkAsset['assetID'],
+            'json' => '{}'
         ];
 
         if (isset($options['pageRanges'])) {

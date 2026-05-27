@@ -47,7 +47,8 @@ class BatchProcessorService extends AbstractService
 
         $batchData = [
             'operations' => array_map(fn($op) => $op->toArray(), $batchOperations),
-            'options' => $options
+            'options' => $options,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/batch', $batchData);

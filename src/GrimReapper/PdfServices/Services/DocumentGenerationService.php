@@ -38,7 +38,8 @@ class DocumentGenerationService extends AbstractService
         $requestData = [
             'assetID' => $asset['assetID'],
             'outputFormat' => $outputFormat,
-            'jsonDataForMerge' => is_string($jsonData) ? json_decode($jsonData, true) : $jsonData
+            'jsonDataForMerge' => is_string($jsonData) ? json_decode($jsonData, true) : $jsonData,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/documentgeneration', $requestData);

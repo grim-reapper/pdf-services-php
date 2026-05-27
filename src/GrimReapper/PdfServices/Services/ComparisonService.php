@@ -42,7 +42,8 @@ class ComparisonService extends AbstractService
 
         $data = [
             'baseAssetID' => $baseAsset['assetID'],
-            'comparisonAssetID' => $comparisonAsset['assetID']
+            'comparisonAssetID' => $comparisonAsset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
@@ -76,7 +77,8 @@ class ComparisonService extends AbstractService
         $data = [
             'baseAssetID' => $baseAsset['assetID'],
             'comparisonAssetID' => $comparisonAsset['assetID'],
-            'includeDiffReport' => true
+            'includeDiffReport' => true,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);

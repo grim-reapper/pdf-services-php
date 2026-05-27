@@ -35,7 +35,8 @@ class AccessibilityService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $requestData = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         if (isset($options['shiftHeadings'])) $requestData['shiftHeadings'] = (bool)$options['shiftHeadings'];
@@ -82,7 +83,8 @@ class AccessibilityService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $requestData = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         if (isset($options['pageStart'])) $requestData['pageStart'] = (int)$options['pageStart'];

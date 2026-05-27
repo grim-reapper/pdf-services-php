@@ -36,7 +36,8 @@ class AnnotationService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'annotations' => $annotations
+            'annotations' => $annotations,
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdf-annotations', $data);
@@ -65,7 +66,8 @@ class AnnotationService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdf-annotations/get', $data);

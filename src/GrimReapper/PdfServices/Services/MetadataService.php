@@ -22,12 +22,6 @@ class MetadataService extends AbstractService
     }
 
     /**
-     * Get metadata from a PDF document
-     *
-     * @param string $filePath Path to the PDF file
-     * @return array The document metadata
-     */
-    /**
      * Get metadata from a PDF document object
      *
      * @param Document $document
@@ -38,7 +32,8 @@ class MetadataService extends AbstractService
         $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
 
         $data = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
@@ -60,7 +55,8 @@ class MetadataService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $data = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);

@@ -34,7 +34,8 @@ class LinearizeService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $requestData = [
-            'assetID' => $asset['assetID']
+            'assetID' => $asset['assetID'],
+            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/linearize', $requestData);
