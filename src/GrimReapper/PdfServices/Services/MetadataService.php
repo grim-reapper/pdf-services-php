@@ -27,6 +27,32 @@ class MetadataService extends AbstractService
      * @param string $filePath Path to the PDF file
      * @return array The document metadata
      */
+    /**
+     * Get metadata from a PDF document object
+     *
+     * @param Document $document
+     * @return array
+     */
+    public function getMetadataFromDocument(Document $document): array
+    {
+        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+
+        $data = [
+            'assetID' => $asset['assetID']
+        ];
+
+        $response = $this->makeRequest('POST', '/operation/pdfproperties', $data);
+        $jobResult = $this->pollJob($response['location']);
+
+        return $this->getResultData($jobResult, 'pdfProperties');
+    }
+
+    /**
+     * Get metadata from a PDF file
+     *
+     * @param string $filePath Path to the PDF file
+     * @return array The document metadata
+     */
     public function getMetadata(string $filePath): array
     {
         $this->validateFile($filePath);

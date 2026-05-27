@@ -100,17 +100,15 @@ class PageManipulationService extends AbstractService
         $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
 
         $requestData = [
-            'assetID' => $asset['assetID'],
-            'pageActions' => [
+            'assets' => [
                 [
-                    'reorder' => [
-                        'pageRanges' => $pageRanges
-                    ]
+                    'assetID' => $asset['assetID'],
+                    'pageRanges' => $pageRanges
                 ]
             ]
         ];
 
-        $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
+        $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $content = $this->httpClient->download($assetData['downloadUri']);
@@ -137,20 +135,37 @@ class PageManipulationService extends AbstractService
         $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
         $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
 
-        $requestData = [
-            'assetID' => $baseAsset['assetID'],
-            'pageActions' => [
-                [
-                    'insert' => [
-                        'inputAssetID' => $sourceAsset['assetID'],
-                        'at' => $atPage,
-                        'pageRanges' => $pageRanges
-                    ]
-                ]
-            ]
+        $metadataService = new MetadataService($this->config, $this->httpClient);
+        $metadata = $metadataService->getMetadataFromDocument($baseDocument);
+        $totalPages = $metadata['pageCount'] ?? 0;
+
+        $assets = [];
+
+        // 1. Pages before insertion point
+        if ($atPage > 0) {
+            $assets[] = [
+                'assetID' => $baseAsset['assetID'],
+                'pageRanges' => [['start' => 1, 'end' => min($atPage, $totalPages)]]
+            ];
+        }
+
+        // 2. Inserted pages
+        $assets[] = [
+            'assetID' => $sourceAsset['assetID'],
+            'pageRanges' => $pageRanges
         ];
 
-        $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
+        // 3. Pages after insertion point
+        if ($atPage < $totalPages) {
+            $assets[] = [
+                'assetID' => $baseAsset['assetID'],
+                'pageRanges' => [['start' => $atPage + 1, 'end' => $totalPages]]
+            ];
+        }
+
+        $requestData = ['assets' => $assets];
+
+        $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $content = $this->httpClient->download($assetData['downloadUri']);
@@ -167,7 +182,7 @@ class PageManipulationService extends AbstractService
      * Replace pages in a base document with pages from a source document
      *
      * @param Document $baseDocument The document to replace pages in
-     * @param array $basePageRanges Page ranges in the base document to be replaced
+     * @param array $basePageRanges Page ranges in the base document to be replaced (currently supporting single range for simplicity)
      * @param Document $sourceDocument The document to take replacement pages from
      * @param array $sourcePageRanges Page ranges from the source document
      * @return Document
@@ -177,20 +192,42 @@ class PageManipulationService extends AbstractService
         $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
         $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
 
-        $requestData = [
-            'assetID' => $baseAsset['assetID'],
-            'pageActions' => [
-                [
-                    'replace' => [
-                        'inputAssetID' => $sourceAsset['assetID'],
-                        'pageRanges' => $basePageRanges,
-                        'sourcePageRanges' => $sourcePageRanges
-                    ]
-                ]
-            ]
+        $metadataService = new MetadataService($this->config, $this->httpClient);
+        $metadata = $metadataService->getMetadataFromDocument($baseDocument);
+        $totalPages = $metadata['pageCount'] ?? 0;
+
+        // Assuming first range for replacement logic
+        $replaceRange = $basePageRanges[0] ?? ['start' => 1, 'end' => 1];
+        $replaceStart = $replaceRange['start'];
+        $replaceEnd = $replaceRange['end'];
+
+        $assets = [];
+
+        // 1. Pages before replaced range
+        if ($replaceStart > 1) {
+            $assets[] = [
+                'assetID' => $baseAsset['assetID'],
+                'pageRanges' => [['start' => 1, 'end' => $replaceStart - 1]]
+            ];
+        }
+
+        // 2. Replacement pages
+        $assets[] = [
+            'assetID' => $sourceAsset['assetID'],
+            'pageRanges' => $sourcePageRanges
         ];
 
-        $response = $this->makeRequest('POST', '/operation/pagemanipulation', $requestData);
+        // 3. Pages after replaced range
+        if ($replaceEnd < $totalPages) {
+            $assets[] = [
+                'assetID' => $baseAsset['assetID'],
+                'pageRanges' => [['start' => $replaceEnd + 1, 'end' => $totalPages]]
+            ];
+        }
+
+        $requestData = ['assets' => $assets];
+
+        $response = $this->makeRequest('POST', '/operation/combinepdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
         $assetData = $this->getResultData($jobResult, 'asset');
         $content = $this->httpClient->download($assetData['downloadUri']);
