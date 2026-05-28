@@ -69,7 +69,7 @@ class FormService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'filled.pdf',
             strlen($resultContent)
@@ -85,7 +85,7 @@ class FormService extends AbstractService
      */
     public function exportFormData(Document $document, string $format = 'json'): array|string
     {
-        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $asset = $this->uploadAsset($document->getContent(), $document->getMimeType());
 
         $requestData = [
             'assetID' => $asset['assetID'],
@@ -114,7 +114,7 @@ class FormService extends AbstractService
      */
     public function importFormData(Document $document, string $formData, string $format = 'json'): Document
     {
-        $pdfAsset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $pdfAsset = $this->uploadAsset($document->getContent(), $document->getMimeType());
         $dataAsset = $this->uploadAsset($formData, $format === 'json' ? 'application/json' : 'application/vnd.adobe.xfdf');
 
         $requestData = [
@@ -128,7 +128,7 @@ class FormService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'imported.pdf',
             strlen($resultContent)

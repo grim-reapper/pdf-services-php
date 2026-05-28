@@ -35,7 +35,6 @@ class MarkdownService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdftomarkdown', $requestData);
@@ -45,7 +44,7 @@ class MarkdownService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/zip',
             'markdown.zip',
             strlen($resultContent)

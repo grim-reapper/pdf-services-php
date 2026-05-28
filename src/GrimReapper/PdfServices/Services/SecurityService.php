@@ -78,7 +78,7 @@ class SecurityService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'protected.pdf',
             strlen($resultContent)
@@ -109,7 +109,7 @@ class SecurityService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'unprotected.pdf',
             strlen($resultContent)

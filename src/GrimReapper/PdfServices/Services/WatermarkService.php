@@ -42,8 +42,7 @@ class WatermarkService extends AbstractService
 
         $requestData = [
             'inputDocumentAssetID' => $inputAsset['assetID'],
-            'watermarkDocumentAssetID' => $watermarkAsset['assetID'],
-            'json' => '{}'
+            'watermarkDocumentAssetID' => $watermarkAsset['assetID']
         ];
 
         if (isset($options['pageRanges'])) {
@@ -60,7 +59,7 @@ class WatermarkService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'watermarked.pdf',
             strlen($resultContent)

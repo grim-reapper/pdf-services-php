@@ -36,7 +36,6 @@ class AccessibilityService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
         ];
 
         if (isset($options['shiftHeadings'])) $requestData['shiftHeadings'] = (bool)$options['shiftHeadings'];
@@ -49,7 +48,7 @@ class AccessibilityService extends AbstractService
         $taggedContent = $this->httpClient->download($taggedAssetData['downloadUri']);
 
         $taggedDoc = new Document(
-            base64_encode($taggedContent),
+            $taggedContent,
             'application/pdf',
             'tagged.pdf',
             strlen($taggedContent)
@@ -59,7 +58,7 @@ class AccessibilityService extends AbstractService
         if (isset($jobResult['report'])) {
             $reportContent = $this->httpClient->download($jobResult['report']['downloadUri']);
             $reportDoc = new Document(
-                base64_encode($reportContent),
+                $reportContent,
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'report.xlsx',
                 strlen($reportContent)
@@ -84,7 +83,6 @@ class AccessibilityService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
         ];
 
         if (isset($options['pageStart'])) $requestData['pageStart'] = (int)$options['pageStart'];
@@ -97,7 +95,7 @@ class AccessibilityService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'text/html',
             'accessibility_report.html',
             strlen($resultContent)

@@ -39,7 +39,6 @@ class DocumentGenerationService extends AbstractService
             'assetID' => $asset['assetID'],
             'outputFormat' => $outputFormat,
             'jsonDataForMerge' => is_string($jsonData) ? json_decode($jsonData, true) : $jsonData,
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/documentgeneration', $requestData);
@@ -49,7 +48,7 @@ class DocumentGenerationService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             $outputFormat === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'generated.' . $outputFormat,
             strlen($resultContent)

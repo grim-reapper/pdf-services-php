@@ -37,7 +37,6 @@ class AnnotationService extends AbstractService
         $data = [
             'assetID' => $asset['assetID'],
             'annotations' => $annotations,
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdf-annotations', $data);
@@ -46,7 +45,7 @@ class AnnotationService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'annotated.pdf',
             strlen($resultContent)
@@ -67,7 +66,6 @@ class AnnotationService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdf-annotations/get', $data);

@@ -47,7 +47,7 @@ class PdfSplitService extends AbstractService
         foreach ($assetsData as $assetData) {
             $resultContent = $this->httpClient->download($assetData['downloadUri']);
             $results[] = new Document(
-                base64_encode($resultContent),
+                $resultContent,
                 'application/pdf',
                 'split.pdf',
                 strlen($resultContent)

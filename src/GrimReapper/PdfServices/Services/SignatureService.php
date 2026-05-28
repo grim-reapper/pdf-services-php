@@ -37,7 +37,6 @@ class SignatureService extends AbstractService
         $data = [
             'assetID' => $asset['assetID'],
             'options' => $options,
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
@@ -46,7 +45,7 @@ class SignatureService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'signature_field.pdf',
             strlen($resultContent)
@@ -69,7 +68,6 @@ class SignatureService extends AbstractService
         $data = [
             'assetID' => $asset['assetID'],
             'options' => $options,
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
@@ -78,7 +76,7 @@ class SignatureService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'signed.pdf',
             strlen($resultContent)

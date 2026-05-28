@@ -43,7 +43,7 @@ class PdfConversionService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'output.pdf',
             strlen($resultContent)
@@ -87,7 +87,7 @@ class PdfConversionService extends AbstractService
             foreach ($assetsData as $i => $assetData) {
                 $resultContent = $this->httpClient->download($assetData['downloadUri']);
                 $results[] = new Document(
-                    base64_encode($resultContent),
+                    $resultContent,
                     $mimeMap[$targetFormat] ?? 'application/octet-stream',
                     "output_{$i}.{$targetFormat}",
                     strlen($resultContent)
@@ -100,7 +100,7 @@ class PdfConversionService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             $mimeMap[$targetFormat] ?? 'application/octet-stream',
             "output.{$targetFormat}",
             strlen($resultContent)
@@ -142,7 +142,7 @@ class PdfConversionService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'output.pdf',
             strlen($resultContent)
@@ -198,7 +198,7 @@ class PdfConversionService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'output.pdf',
             strlen($content)

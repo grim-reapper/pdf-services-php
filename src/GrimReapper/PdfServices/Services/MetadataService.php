@@ -29,7 +29,7 @@ class MetadataService extends AbstractService
      */
     public function getMetadataFromDocument(Document $document): array
     {
-        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $asset = $this->uploadAsset($document->getContent(), $document->getMimeType());
 
         $data = [
             'assetID' => $asset['assetID']

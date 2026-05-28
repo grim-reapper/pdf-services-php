@@ -45,7 +45,7 @@ class CompressionService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'compressed.pdf',
             strlen($resultContent)

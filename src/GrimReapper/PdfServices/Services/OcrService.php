@@ -44,7 +44,7 @@ class OcrService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'ocr_output.pdf',
             strlen($resultContent)

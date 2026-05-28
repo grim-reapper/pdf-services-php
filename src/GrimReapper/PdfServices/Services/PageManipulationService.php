@@ -25,7 +25,7 @@ class PageManipulationService extends AbstractService
      */
     public function deletePages(Document $document, array $pageRanges): Document
     {
-        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $asset = $this->uploadAsset($document->getContent(), $document->getMimeType());
 
         $requestData = [
             'assetID' => $asset['assetID'],
@@ -44,7 +44,7 @@ class PageManipulationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'manipulated.pdf',
             strlen($content)
@@ -61,7 +61,7 @@ class PageManipulationService extends AbstractService
      */
     public function rotatePages(Document $document, int $angle, array $pageRanges = [['start' => 1, 'end' => -1]]): Document
     {
-        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $asset = $this->uploadAsset($document->getContent(), $document->getMimeType());
 
         $requestData = [
             'assetID' => $asset['assetID'],
@@ -81,7 +81,7 @@ class PageManipulationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'rotated.pdf',
             strlen($content)
@@ -97,7 +97,7 @@ class PageManipulationService extends AbstractService
      */
     public function reorderPages(Document $document, array $pageRanges): Document
     {
-        $asset = $this->uploadAsset(base64_decode($document->getContent()), $document->getMimeType());
+        $asset = $this->uploadAsset($document->getContent(), $document->getMimeType());
 
         $requestData = [
             'assets' => [
@@ -114,7 +114,7 @@ class PageManipulationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'reordered.pdf',
             strlen($content)
@@ -132,8 +132,8 @@ class PageManipulationService extends AbstractService
      */
     public function insertPages(Document $baseDocument, Document $sourceDocument, int $atPage, ?array $pageRanges = null): Document
     {
-        $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
-        $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
+        $baseAsset = $this->uploadAsset($baseDocument->getContent(), $baseDocument->getMimeType());
+        $sourceAsset = $this->uploadAsset($sourceDocument->getContent(), $sourceDocument->getMimeType());
 
         $metadataService = new MetadataService($this->config, $this->httpClient);
         $metadata = $metadataService->getMetadataFromDocument($baseDocument);
@@ -174,7 +174,7 @@ class PageManipulationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'inserted.pdf',
             strlen($content)
@@ -192,8 +192,8 @@ class PageManipulationService extends AbstractService
      */
     public function replacePages(Document $baseDocument, array $basePageRanges, Document $sourceDocument, ?array $sourcePageRanges = null): Document
     {
-        $baseAsset = $this->uploadAsset(base64_decode($baseDocument->getContent()), $baseDocument->getMimeType());
-        $sourceAsset = $this->uploadAsset(base64_decode($sourceDocument->getContent()), $sourceDocument->getMimeType());
+        $baseAsset = $this->uploadAsset($baseDocument->getContent(), $baseDocument->getMimeType());
+        $sourceAsset = $this->uploadAsset($sourceDocument->getContent(), $sourceDocument->getMimeType());
 
         $metadataService = new MetadataService($this->config, $this->httpClient);
         $metadata = $metadataService->getMetadataFromDocument($baseDocument);
@@ -239,7 +239,7 @@ class PageManipulationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'replaced.pdf',
             strlen($content)

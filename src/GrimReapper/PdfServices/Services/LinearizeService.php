@@ -35,7 +35,6 @@ class LinearizeService extends AbstractService
 
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/linearize', $requestData);
@@ -45,7 +44,7 @@ class LinearizeService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'linearized.pdf',
             strlen($resultContent)

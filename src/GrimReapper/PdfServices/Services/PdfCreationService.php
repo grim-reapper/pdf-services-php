@@ -51,7 +51,7 @@ class PdfCreationService extends AbstractService
         // Note: htmltopdf is strict and only supports specific keys.
         $requestData = [
             'assetID' => $asset['assetID'],
-            'json' => is_array($options['json'] ?? null) ? json_encode($options['json']) : ($options['json'] ?? '{}'),
+
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
@@ -97,7 +97,7 @@ class PdfCreationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'document.pdf',
             strlen($content)
@@ -115,7 +115,7 @@ class PdfCreationService extends AbstractService
     {
         $requestData = [
             'inputUrl' => $url,
-            'json' => is_array($options['json'] ?? null) ? json_encode($options['json']) : ($options['json'] ?? '{}'),
+
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
@@ -148,7 +148,7 @@ class PdfCreationService extends AbstractService
         $content = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($content),
+            $content,
             'application/pdf',
             'document.pdf',
             strlen($content)
@@ -208,7 +208,7 @@ class PdfCreationService extends AbstractService
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'document.pdf',
             strlen($resultContent)

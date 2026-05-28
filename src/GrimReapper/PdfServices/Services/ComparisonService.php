@@ -43,7 +43,6 @@ class ComparisonService extends AbstractService
         $data = [
             'baseAssetID' => $baseAsset['assetID'],
             'comparisonAssetID' => $comparisonAsset['assetID'],
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
@@ -78,7 +77,6 @@ class ComparisonService extends AbstractService
             'baseAssetID' => $baseAsset['assetID'],
             'comparisonAssetID' => $comparisonAsset['assetID'],
             'includeDiffReport' => true,
-            'json' => '{}'
         ];
 
         $response = $this->makeRequest('POST', '/operation/comparepdf', $data);
@@ -88,7 +86,7 @@ class ComparisonService extends AbstractService
         $resultContent = $this->httpClient->download($diffReportData['downloadUri']);
 
         $document = new Document(
-            base64_encode($resultContent),
+            $resultContent,
             'application/pdf',
             'diff_report.pdf',
             strlen($resultContent)
