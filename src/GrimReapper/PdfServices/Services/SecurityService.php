@@ -39,8 +39,11 @@ class SecurityService extends AbstractService
             $protection['userPassword'] = $options['password'];
         }
 
+        // Adobe requires ownerPassword to be set for permissions to work
         if (isset($options['ownerPassword'])) {
             $protection['ownerPassword'] = $options['ownerPassword'];
+        } elseif (!empty($options['permissions']) && isset($options['password'])) {
+            $protection['ownerPassword'] = $options['password'];
         }
 
         // Map permission enums to Adobe API v2 expected values
@@ -68,8 +71,8 @@ class SecurityService extends AbstractService
 
         $data = [
             'assetID' => $asset['assetID'],
-            'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
-            'passwordProtection' => $protection
+            'passwordProtection' => $protection,
+            'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256'
         ];
 
         $response = $this->makeRequest('POST', '/operation/protectpdf', $data);

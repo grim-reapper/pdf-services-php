@@ -217,14 +217,14 @@ abstract class AbstractService implements ServiceInterface
         while (time() - $startTime < $maxWaitTime) {
             $response = $this->httpClient->request('GET', $location, [], [], true);
 
-            $status = $response['status'] ?? '';
+            $status = $response['status'] ?? ($response['result']['status'] ?? '');
 
             if ($status === 'done' || $status === 'completed') {
                 return $response;
             }
 
             if ($status === 'failed') {
-                $error = $response['error'] ?? 'Unknown error';
+                $error = $response['error'] ?? ($response['result']['error'] ?? 'Unknown error');
                 throw PdfServicesException::fromApiError($error, 400);
             }
 

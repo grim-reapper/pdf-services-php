@@ -148,14 +148,12 @@ class HttpClient
                 return $this->makeCurlRequest($method, $url, $data, $headers);
             }
         } catch (ApiException $e) {
-            if ($e->getCode() === 400) {
-                $this->log('error', "Bad Request (400) details", [
-                    'url' => $url,
-                    'method' => $method,
-                    'request_data' => is_array($data) ? $data : 'binary',
-                    'error_details' => $e->getDetails()
-                ]);
-            }
+            $this->log('error', "API Request Failure", [
+                'status_code' => $e->getCode(),
+                'url' => $url,
+                'method' => $method,
+                'request_body' => ($data !== null && $data !== '') ? (is_array($data) ? json_encode($data) : 'binary') : 'empty'
+            ]);
             throw $e;
         } catch (AuthenticationException $e) {
             $this->log('error', 'API error', [
@@ -187,13 +185,21 @@ class HttpClient
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+        curl_setopt($ch, CURLOPT_ENCODING, ''); // Handle compressed transfer automatically
 
         $content = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($content === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            throw new ApiException("Failed to download file from {$url}. cURL error: {$error}");
+        }
+
         curl_close($ch);
 
         if ($statusCode >= 400) {
-            throw new ApiException("Failed to download file from {$url}. Status code: {$statusCode}");
+            throw new ApiException("Failed to download file from {$url}. Status code: {$statusCode}. Body: " . substr((string)$content, 0, 500));
         }
 
         return (string)$content;
@@ -216,7 +222,7 @@ class HttpClient
             $request = $request->withHeader($name, $value);
         }
 
-        if (!empty($data)) {
+        if ($data !== null && $data !== '') {
             $body = is_array($data) ? json_encode($data) : $data;
             $stream = $this->streamFactory->createStream($body);
             $request = $request->withBody($stream);
@@ -252,6 +258,7 @@ class HttpClient
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $this->formatHeaders($headers));
+        curl_setopt($ch, CURLOPT_ENCODING, ''); // Handle all encodings supported by cURL
 
         // Capture headers via a callback for more reliability
         $responseHeaders = [];
@@ -264,7 +271,7 @@ class HttpClient
             return $len;
         });
 
-        if (!empty($data)) {
+        if ($data !== null && $data !== '') {
             $body = is_array($data) ? json_encode($data) : $data;
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }

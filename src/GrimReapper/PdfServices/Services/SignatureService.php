@@ -34,10 +34,9 @@ class SignatureService extends AbstractService
         $content = file_get_contents($filePath);
         $asset = $this->uploadAsset($content, 'application/pdf');
 
-        $data = [
+        $data = array_merge([
             'assetID' => $asset['assetID'],
-            'options' => $options,
-        ];
+        ], $options);
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
         $jobResult = $this->pollJob($response['location']);
@@ -65,10 +64,9 @@ class SignatureService extends AbstractService
         $content = file_get_contents($filePath);
         $asset = $this->uploadAsset($content, 'application/pdf');
 
-        $data = [
+        $data = array_merge([
             'assetID' => $asset['assetID'],
-            'options' => $options,
-        ];
+        ], $options);
 
         $response = $this->makeRequest('POST', '/operation/pdfeseal', $data);
         $jobResult = $this->pollJob($response['location']);

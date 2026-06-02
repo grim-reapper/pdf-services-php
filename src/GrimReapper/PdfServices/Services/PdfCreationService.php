@@ -49,14 +49,12 @@ class PdfCreationService extends AbstractService
 
         // Map and filter options for Adobe API v2 (htmltopdf)
         // Note: htmltopdf is strict and only supports specific keys.
-        $requestData = [
-            'assetID' => $asset['assetID'],
-
+        $json = [
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
         if (isset($options['waitTimeToLoad'])) {
-            $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
+            $json['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
         }
 
         // Handle pageLayout mapping (pageWidth and pageHeight in inches)
@@ -87,8 +85,13 @@ class PdfCreationService extends AbstractService
         // Margins must be defined via CSS @page rules in the HTML content itself.
 
         if (!empty($pageLayout)) {
-            $requestData['pageLayout'] = $pageLayout;
+            $json['pageLayout'] = $pageLayout;
         }
+
+        $requestData = [
+            'assetID' => $asset['assetID'],
+            'json' => json_encode($json)
+        ];
 
         $this->log('debug', 'Submitting HTML to PDF job', ['request_data' => $requestData]);
         $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
@@ -113,14 +116,12 @@ class PdfCreationService extends AbstractService
      */
     public function fromUrl(string $url, array $options = []): Document
     {
-        $requestData = [
-            'inputUrl' => $url,
-
+        $json = [
             'includeHeaderFooter' => (bool)($options['includeHeaderFooter'] ?? false)
         ];
 
         if (isset($options['waitTimeToLoad'])) {
-            $requestData['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
+            $json['waitTimeToLoad'] = (int)$options['waitTimeToLoad'];
         }
 
         // Handle pageLayout mapping
@@ -138,8 +139,13 @@ class PdfCreationService extends AbstractService
         }
 
         if (!empty($pageLayout)) {
-            $requestData['pageLayout'] = $pageLayout;
+            $json['pageLayout'] = $pageLayout;
         }
+
+        $requestData = [
+            'inputUrl' => $url,
+            'json' => json_encode($json)
+        ];
 
         $this->log('debug', 'Submitting URL to PDF job', ['request_data' => $requestData]);
         $response = $this->makeRequest('POST', '/operation/htmltopdf', $requestData);
