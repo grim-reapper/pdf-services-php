@@ -18,7 +18,7 @@ class DocumentTest extends TestCase
         $this->assertEquals('test content', $document->getContent());
         $this->assertEquals('text/plain', $document->getMimeType());
         $this->assertNull($document->getFilename());
-        $this->assertNull($document->getSize());
+        $this->assertEquals(strlen('test content'), $document->getSize());
         $this->assertFalse($document->isPdf());
     }
 
@@ -74,10 +74,9 @@ class DocumentTest extends TestCase
     {
         $vfs = vfsStream::setup('root');
 
-        // For PDF (binary) content, we need to base64 encode it first
+        // We now store raw binary content
         $content = 'Test PDF content';
-        $base64Content = base64_encode($content);
-        $document = new Document($base64Content, 'application/pdf', 'test.pdf', strlen($base64Content));
+        $document = new Document($content, 'application/pdf', 'test.pdf');
 
         $savePath = $vfs->url() . '/output.pdf';
         $result = $document->saveTo($savePath);
@@ -123,11 +122,11 @@ class DocumentTest extends TestCase
 
     public function testBinaryContentHandling(): void
     {
-        // Test binary content (simulated with base64)
-        $binaryContent = base64_encode('binary pdf content');
+        // Test binary content (raw)
+        $binaryContent = 'binary pdf content';
         $document = new Document($binaryContent, 'application/pdf');
 
-        // The content should be returned as-is (base64 encoded)
+        // The content should be returned as-is
         $this->assertEquals($binaryContent, $document->getContent());
     }
 }

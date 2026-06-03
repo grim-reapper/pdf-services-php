@@ -157,19 +157,33 @@ class Job
      * Create job from API response
      *
      * @param array $response The API response
+     * @param string|null $jobId Optional jobId if not in response
      * @return self
      */
-    public static function fromApiResponse(array $response): self
+    public static function fromApiResponse(array $response, ?string $jobId = null): self
     {
         $createdAt = isset($response['created']) ? new DateTime($response['created']) : null;
         $updatedAt = isset($response['modified']) ? new DateTime($response['modified']) : null;
 
+        // In API v2, the 'result' might be top-level or under 'result' key.
+        // We prioritize top-level keys that represent results.
+        $result = $response['result'] ?? null;
+        if (!$result) {
+            $resultKeys = ['asset', 'assets', 'content', 'pdfProperties', 'diffReport'];
+            foreach ($resultKeys as $key) {
+                if (isset($response[$key])) {
+                    $result = [$key => $response[$key]];
+                    break;
+                }
+            }
+        }
+
         return new self(
-            $response['jobId'] ?? '',
+            $response['jobID'] ?? $response['jobId'] ?? $response['location'] ?? $jobId ?? '',
             $response['status'] ?? 'in_progress',
             $createdAt,
             $updatedAt,
-            $response['result'] ?? null,
+            $result,
             $response['error'] ?? null
         );
     }

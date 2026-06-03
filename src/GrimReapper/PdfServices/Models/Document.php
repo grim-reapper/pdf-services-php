@@ -7,7 +7,9 @@ namespace GrimReapper\PdfServices\Models;
 use GrimReapper\PdfServices\Exceptions\ValidationException;
 
 /**
- * Represents a PDF document
+ * Represents a document in the PDF Services SDK
+ *
+ * Stores the raw binary content of the document.
  */
 class Document
 {
@@ -19,7 +21,7 @@ class Document
     /**
      * Create a new document
      *
-     * @param string $content The document content (base64 encoded for binary)
+     * @param string $content The raw document content
      * @param string $mimeType The MIME type
      * @param string|null $filename The filename
      * @param int|null $size The file size in bytes
@@ -33,7 +35,7 @@ class Document
         $this->content = $content;
         $this->mimeType = $mimeType;
         $this->filename = $filename;
-        $this->size = $size;
+        $this->size = $size ?? strlen($content);
     }
 
     /**
@@ -104,19 +106,7 @@ class Document
             throw new ValidationException("Cannot create directory: {$directory}");
         }
 
-        $content = $this->isBinaryContent() ? base64_decode($this->content) : $this->content;
-
-        return file_put_contents($path, $content) !== false;
-    }
-
-    /**
-     * Check if content is binary (base64 encoded)
-     *
-     * @return bool
-     */
-    private function isBinaryContent(): bool
-    {
-        return $this->mimeType !== 'text/html' && $this->mimeType !== 'text/plain';
+        return file_put_contents($path, $this->content) !== false;
     }
 
     /**
@@ -145,11 +135,6 @@ class Document
         $size = filesize($filePath);
         $filename = basename($filePath);
 
-        // Base64 encode binary content
-        if ($mimeType !== 'text/html' && $mimeType !== 'text/plain') {
-            $content = base64_encode($content);
-        }
-
         return new self($content, $mimeType, $filename, $size);
     }
 
@@ -166,7 +151,6 @@ class Document
         string $mimeType = 'text/plain',
         ?string $filename = null
     ): self {
-        $size = strlen($content);
-        return new self($content, $mimeType, $filename, $size);
+        return new self($content, $mimeType, $filename);
     }
 }

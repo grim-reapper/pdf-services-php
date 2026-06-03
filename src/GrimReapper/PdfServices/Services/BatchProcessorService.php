@@ -10,112 +10,231 @@ use GrimReapper\PdfServices\Models\Document;
 
 /**
  * Service for processing batches of PDF operations
+ *
+ * The Adobe PDF Services API does not have a native batch endpoint.
+ * This service executes operations sequentially using individual API endpoints.
  */
 class BatchProcessorService extends AbstractService
 {
-    /**
-     * Get the service name
-     *
-     * @return string
-     */
+    /** @var array<string, string> Map of operation types to API endpoints */
+    private const OPERATION_ENDPOINTS = [
+        'convert'   => '/operation/createpdf',
+        'compress'  => '/operation/compresspdf',
+        'merge'     => '/operation/combinepdf',
+        'ocr'       => '/operation/ocr',
+        'export'    => '/operation/exportpdf',
+        'linearize' => '/operation/linearizepdf',
+        'protect'   => '/operation/protectpdf',
+        'split'     => '/operation/splitpdf',
+    ];
+
+    /** @var array<string, string> Map file extensions to MIME types */
+    private const MIME_TYPES = [
+        'doc'   => 'application/msword',
+        'docx'  => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls'   => 'application/vnd.ms-excel',
+        'xlsx'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt'   => 'application/vnd.ms-powerpoint',
+        'pptx'  => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'pdf'   => 'application/pdf',
+        'txt'   => 'text/plain',
+        'rtf'   => 'application/rtf',
+        'png'   => 'image/png',
+        'jpeg'  => 'image/jpeg',
+        'jpg'   => 'image/jpeg',
+        'gif'   => 'image/gif',
+        'bmp'   => 'image/bmp',
+        'tiff'  => 'image/tiff',
+        'tif'   => 'image/tiff',
+    ];
+
     public function getServiceName(): string
     {
         return 'batch-processor';
     }
 
     /**
-     * Create a new batch with operations
-     *
-     * @param array $operations Array of BatchOperation objects or operation configs
-     * @param array $options Batch options
-     * @return Batch The created batch
+     * Create a batch (stores operations for later execution)
      */
     public function createBatch(array $operations, array $options = []): Batch
     {
-        // Convert operation configs to BatchOperation objects if needed
         $batchOperations = array_map(function ($operation) {
             if ($operation instanceof BatchOperation) {
                 return $operation;
             }
-
             if (is_array($operation)) {
                 return BatchOperation::fromArray($operation);
             }
-
             throw new \InvalidArgumentException('Invalid operation format');
         }, $operations);
 
-        $batchData = [
-            'operations' => array_map(fn($op) => $op->toArray(), $batchOperations),
-            'options' => $options
-        ];
-
-        $response = $this->makeRequest('POST', '/operation/batch', $batchData);
-
-        return Batch::fromApiResponse($response);
+        return new Batch(uniqid('batch_', true), $batchOperations, 'pending');
     }
 
     /**
-     * Get batch status
-     *
-     * @param string $batchId The batch ID
-     * @return Batch The batch with updated status
+     * Execute a batch by running each operation sequentially
      */
-    public function getBatchStatus(string $batchId): Batch
+    public function executeBatch(Batch $batch, int $maxWaitTime = 300, int $pollInterval = 5): Batch
     {
-        $response = $this->makeRequest('GET', "/operation/batch/{$batchId}");
+        $batch->updateStatus('processing');
+        $results = [];
+        $allSucceeded = true;
 
-        return Batch::fromApiResponse($response);
-    }
+        foreach ($batch->getOperations() as $index => $operation) {
+            $opId = $operation->getOperationId() ?? "operation_{$index}";
 
-    /**
-     * Cancel a batch
-     *
-     * @param string $batchId The batch ID
-     * @return bool True if cancelled successfully
-     */
-    public function cancelBatch(string $batchId): bool
-    {
-        $response = $this->makeRequest('DELETE', "/operation/batch/{$batchId}");
-
-        return isset($response['cancelled']) && $response['cancelled'] === true;
-    }
-
-    /**
-     * Execute batch synchronously (wait for completion)
-     *
-     * @param Batch $batch The batch to execute
-     * @param int $maxWaitTime Maximum wait time in seconds (default 300)
-     * @param int $pollInterval Poll interval in seconds (default 5)
-     * @return Batch The completed batch
-     */
-    public function executeBatch(
-        Batch $batch,
-        int $maxWaitTime = 300,
-        int $pollInterval = 5
-    ): Batch {
-        $startTime = time();
-
-        while (!$batch->isCompleted() && !$batch->isFailed()) {
-            if (time() - $startTime > $maxWaitTime) {
-                throw new \RuntimeException("Batch execution timed out after {$maxWaitTime} seconds");
+            try {
+                $result = $this->executeOperation($operation);
+                $results[$opId] = [
+                    'status' => 'completed',
+                    'output' => $result,
+                ];
+            } catch (\Throwable $e) {
+                $allSucceeded = false;
+                $results[$opId] = [
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ];
             }
-
-            sleep($pollInterval);
-            $batch = $this->getBatchStatus($batch->getBatchId());
         }
+
+        $batch->updateStatus(
+            $allSucceeded ? 'completed' : 'failed',
+            $results,
+            $allSucceeded ? null : 'One or more operations failed'
+        );
 
         return $batch;
     }
 
     /**
+     * Execute a single batch operation by calling the appropriate API endpoint
+     */
+    private function executeOperation(BatchOperation $operation): array
+    {
+        $type = $operation->getType();
+        $endpoint = self::OPERATION_ENDPOINTS[$type] ?? null;
+
+        if ($endpoint === null) {
+            throw new \InvalidArgumentException("Unsupported operation type: {$type}");
+        }
+
+        // Upload input file(s)
+        $input = $operation->getInput();
+        // Input can be: ['file' => 'path'] or ['files' => ['path1', 'path2']]
+        $inputFiles = $input['files'] ?? ($input['file'] ? [$input['file']] : []);
+        $assetIds = [];
+
+        foreach ($inputFiles as $file) {
+            $content = is_file($file) ? file_get_contents($file) : null;
+            if ($content === false) {
+                throw new \RuntimeException("Cannot read file: {$file}");
+            }
+            // Detect the correct MIME type from the file extension
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            $mediaType = self::MIME_TYPES[$ext] ?? 'application/octet-stream';
+            $asset = $this->uploadAsset($content, $mediaType);
+            $assetIds[] = $asset['assetID'];
+        }
+
+        // Build request based on operation type
+        $requestData = $this->buildRequestData($type, $operation, $assetIds);
+
+        // Execute operation
+        $response = $this->makeRequest('POST', $endpoint, $requestData);
+        $jobResult = $this->pollJob($response['location']);
+
+        // Extract output
+        $outputData = $this->getResultData($jobResult, ['asset', 'content', 'assets']);
+        $outputContent = $this->httpClient->download($outputData['downloadUri']);
+
+        $output = $operation->getOutput();
+        $outputFile = $output['file'] ?? null;
+
+        // Save to disk if output file was specified in the operation definition
+        if ($outputFile) {
+            $dir = dirname($outputFile);
+            if (!is_dir($dir) && $dir !== '.') {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($outputFile, $outputContent);
+        }
+
+        return [
+            'downloadUri' => $outputData['downloadUri'],
+            'content' => $outputContent,
+            'outputFile' => $outputFile,
+        ];
+    }
+
+    /**
+     * Build request data for a specific operation type
+     */
+    private function buildRequestData(string $type, BatchOperation $operation, array $assetIds): array
+    {
+        $options = $operation->getOptions();
+
+        return match ($type) {
+            'convert' => [
+                'assetID' => $assetIds[0],
+                'documentLanguage' => $options['documentLanguage'] ?? 'en-US',
+            ],
+            'compress' => [
+                'assetID' => $assetIds[0],
+                'compressionLevel' => $options['compressionLevel'] ?? 'MEDIUM',
+            ],
+            'merge' => [
+                'assets' => array_map(fn($id) => ['assetID' => $id], $assetIds),
+            ],
+            'ocr' => [
+                'assetID' => $assetIds[0],
+                'ocrLang' => $options['ocrLang'] ?? 'en-US',
+                'ocrType' => $options['ocrType'] ?? 'searchable_image',
+            ],
+            'export' => [
+                'assetID' => $assetIds[0],
+                'targetFormat' => $options['targetFormat'] ?? 'docx',
+            ],
+            'linearize' => [
+                'assetID' => $assetIds[0],
+            ],
+            'protect' => [
+                'assetID' => $assetIds[0],
+                'passwordProtection' => ['ownerPassword' => $options['password'] ?? ''],
+                'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
+            ],
+            'split' => [
+                'assetID' => $assetIds[0],
+                'splitoption' => $options['splitoption'] ?? ['pageRanges' => [['start' => 1, 'end' => 1]]],
+            ],
+            default => throw new \InvalidArgumentException("Unsupported operation type: {$type}"),
+        };
+    }
+
+    /**
+     * Create batch from simple operation definitions
+     */
+    public function createBatchFromDefinitions(array $operationDefs): Batch
+    {
+        $operations = [];
+
+        foreach ($operationDefs as $i => $def) {
+            $operationId = $def['operationId'] ?? "operation_{$i}";
+
+            $operations[] = BatchOperation::fromArray([
+                'operationId' => $operationId,
+                'type' => $def['type'],
+                'input' => ['file' => $def['input']],
+                'output' => $def['output'] ? ['file' => $def['output']] : [],
+                'options' => $def['options'] ?? [],
+            ]);
+        }
+
+        return $this->createBatch($operations);
+    }
+
+    /**
      * Create and execute a batch in one call
-     *
-     * @param array $operations Array of operations
-     * @param array $options Batch options
-     * @param int $maxWaitTime Maximum wait time in seconds
-     * @param int $pollInterval Poll interval in seconds
-     * @return Batch The completed batch
      */
     public function createAndExecuteBatch(
         array $operations,
@@ -129,9 +248,6 @@ class BatchProcessorService extends AbstractService
 
     /**
      * Get batch results as documents
-     *
-     * @param Batch $batch The completed batch
-     * @return array Array of Document objects keyed by operation ID
      */
     public function getBatchResults(Batch $batch): array
     {
@@ -141,114 +257,27 @@ class BatchProcessorService extends AbstractService
 
         $results = [];
         foreach ($batch->getResults() as $operationId => $result) {
-            if (isset($result['output']) && isset($result['output']['file'])) {
-                // Download the result file
-                $outputPath = $result['output']['file'];
-                $document = $this->downloadResult($outputPath);
-                $results[$operationId] = $document;
+            if (isset($result['output']['content']) && $result['output']['content']) {
+                $outputFile = $result['output']['outputFile'] ?? "output_{$operationId}.pdf";
+                $results[$operationId] = new Document(
+                    $result['output']['content'],
+                    'application/pdf',
+                    basename($outputFile),
+                    strlen($result['output']['content'])
+                );
             }
         }
 
         return $results;
     }
 
-    /**
-     * Download a result file
-     *
-     * @param string $resultUrl The result URL
-     * @return Document The downloaded document
-     */
-    private function downloadResult(string $resultUrl): Document
+    public function getBatchStatus(string $batchId): Batch
     {
-        // This would typically download from the result URL
-        // For now, we'll simulate with a placeholder
-        return Document::fromString('Downloaded content', 'application/pdf', basename($resultUrl));
+        throw new \RuntimeException('Batch status polling is not supported — operations execute sequentially.');
     }
 
-    /**
-     * Create batch from simple operation definitions
-     *
-     * @param array $operationDefs Array of operation definitions
-     * @return Batch The created batch
-     *
-     * Example:
-     * [
-     *     ['type' => 'convert', 'input' => 'doc1.docx', 'output' => 'pdf1.pdf'],
-     *     ['type' => 'merge', 'inputs' => ['pdf1.pdf', 'pdf2.pdf'], 'output' => 'merged.pdf'],
-     *     ['type' => 'ocr', 'input' => 'scanned.pdf', 'output' => 'ocr.pdf']
-     * ]
-     */
-    public function createBatchFromDefinitions(array $operationDefs): Batch
+    public function cancelBatch(string $batchId): bool
     {
-        $operations = [];
-
-        foreach ($operationDefs as $i => $def) {
-            $operationId = $def['operationId'] ?? "operation_{$i}";
-
-            switch ($def['type']) {
-                case 'convert':
-                    $operations[] = BatchOperation::createConversion(
-                        $operationId,
-                        $def['input'],
-                        $def['output'],
-                        $def['fromFormat'] ?? $this->guessFormat($def['input']),
-                        $def['toFormat'] ?? $this->guessFormat($def['output']),
-                        $def['options'] ?? []
-                    );
-                    break;
-
-                case 'merge':
-                    $operations[] = BatchOperation::createMerge(
-                        $operationId,
-                        $def['inputs'],
-                        $def['output'],
-                        $def['options'] ?? []
-                    );
-                    break;
-
-                case 'ocr':
-                    $operations[] = BatchOperation::createOcr(
-                        $operationId,
-                        $def['input'],
-                        $def['output'],
-                        $def['options'] ?? []
-                    );
-                    break;
-
-                default:
-                    throw new \InvalidArgumentException("Unsupported operation type: {$def['type']}");
-            }
-        }
-
-        return $this->createBatch($operations);
-    }
-
-    /**
-     * Guess file format from extension
-     *
-     * @param string $filename The filename
-     * @return string The format
-     */
-    private function guessFormat(string $filename): string
-    {
-        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-        $formats = [
-            'pdf' => 'pdf',
-            'docx' => 'docx',
-            'doc' => 'doc',
-            'xlsx' => 'xlsx',
-            'xls' => 'xls',
-            'pptx' => 'pptx',
-            'ppt' => 'ppt',
-            'jpg' => 'jpg',
-            'jpeg' => 'jpg',
-            'png' => 'png',
-            'gif' => 'gif',
-            'tiff' => 'tiff',
-            'tif' => 'tiff',
-        ];
-
-        return $formats[$extension] ?? 'pdf';
+        throw new \RuntimeException('Batch cancellation is not supported.');
     }
 }

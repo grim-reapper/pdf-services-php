@@ -1,31 +1,55 @@
 # GrimReapper PDF Services PHP SDK
 
-A comprehensive PHP SDK for Adobe PDF Services API that provides easy integration with all PDF manipulation, conversion, and processing features.
+A comprehensive PHP SDK for Adobe PDF Services API (v2) that provides easy integration with all PDF manipulation, conversion, and processing features.
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Available Services](#available-services)
+  - [PDF Creation](#pdf-creation)
+  - [PDF Conversion](#pdf-conversion)
+  - [PDF Merging & Splitting](#pdf-merging--splitting)
+  - [Page Manipulation](#page-manipulation)
+  - [OCR Processing](#ocr-processing)
+  - [PDF Compression](#pdf-compression)
+  - [Security](#security)
+  - [Linearize (Web Optimize)](#linearize-web-optimize)
+  - [Form Processing](#form-processing)
+  - [PDF Extraction](#pdf-extraction)
+  - [PDF to Markdown](#pdf-to-markdown)
+  - [PDF to Images](#pdf-to-images)
+  - [Accessibility](#accessibility)
+  - [Document Generation](#document-generation)
+  - [Watermarking](#watermarking)
+  - [Metadata](#metadata)
+  - [Digital Signatures](#digital-signatures)
+  - [Document Comparison](#document-comparison)
+  - [Annotations](#annotations)
+- [Advanced Usage](#advanced-usage)
+  - [Batch Processing](#batch-processing)
+  - [Webhooks (Notifiers)](#webhooks-notifiers)
+- [Error Handling](#error-handling)
 
 ## Features
 
-- **PDF Creation**: Generate PDFs from HTML, DOCX, images, and other formats
-- **PDF Conversion**: Convert between PDF, DOCX, images, and other formats
-- **PDF Merging**: Combine multiple PDFs into a single document
-- **PDF Splitting**: Extract pages or split PDFs into multiple documents
-- **OCR Processing**: Extract text from scanned documents
-- **PDF Compression**: Reduce file sizes while maintaining quality
-- **Security**: Password protection and permission management
-- **Annotations**: Add comments, highlights, and markup to PDFs
-- **Form Processing**: Extract and manipulate form data
-- **Metadata Management**: Read and modify PDF metadata
-- **Digital Signatures**: Add and validate electronic signatures
-- **PDF Comparison**: Compare documents and generate diff reports
-- **Batch Processing**: Process multiple operations efficiently
+- **Full API v2 Support**: Uses the latest Adobe PDF Services asynchronous workflow.
+- **All PDF Operations**: Create, convert, merge, split, compress, protect, extract, OCR, and more.
+- **Lazy Loading**: Services are instantiated only when needed for better performance.
+- **Robust Error Handling**: Standardized exceptions for API, authentication, and validation errors.
+- **Regional Endpoints**: Support for US and EU Adobe regions.
+- **Batch Processing**: Execute multiple operations sequentially with a single call.
 
 ## Requirements
 
 - PHP 8.1 or higher
-- Composer for dependency management
+- Composer
+- ext-zip (for ZIP output support)
+- ext-curl (for HTTP requests)
 
 ## Installation
-
-Install the package using Composer:
 
 ```bash
 composer require grim-reapper/pdf-services-php
@@ -39,309 +63,367 @@ composer require grim-reapper/pdf-services-php
 use GrimReapper\PdfServices\Client;
 use GrimReapper\PdfServices\Config\PdfServicesConfig;
 
-// Configure the client
 $config = new PdfServicesConfig(
-    apiKey: 'your-api-key',
     clientId: 'your-client-id',
-    organizationId: 'your-organization-id'
+    clientSecret: 'your-client-secret',
+    organizationId: 'your-organization-id',
+    region: 'us' // 'us' (default) or 'eu'
 );
 
-// Create the client
 $client = new Client($config);
 ```
 
-### PDF Creation from HTML
+---
+
+## Available Services
+
+### PDF Creation
+
+Convert HTML or URLs to PDF.
 
 ```php
-use GrimReapper\PdfServices\Models\Document;
+$service = $client->createPdf();
 
-// Get the PDF creation service
-$creationService = $client->createPdf();
+// From HTML string
+$pdf = $service->fromHtml('<h1>Hello World</h1>', [
+    'format' => 'A4',
+    'includeHeaderFooter' => true
+]);
+$pdf->saveTo('output.pdf');
 
-// Create PDF from HTML
-$result = $creationService->fromHtml(
-    html: '<h1>Hello World</h1><p>This is a PDF created with Adobe PDF Services.</p>',
-    options: [
-        'format' => 'A4',
-        'margin' => ['top' => '1in', 'bottom' => '1in', 'left' => '1in', 'right' => '1in']
-    ]
-);
-
-// Save the result
-$result->saveTo('/path/to/output.pdf');
+// From URL
+$pdf = $service->fromUrl('https://example.com');
+$pdf->saveTo('website.pdf');
 ```
 
 ### PDF Conversion
 
+Convert between various formats.
+
 ```php
-// Get the conversion service
-$conversionService = $client->convert();
+$service = $client->convert();
 
-// Convert DOCX to PDF
-$result = $conversionService->docxToPdf('/path/to/document.docx');
-$result->saveTo('/path/to/output.pdf');
+// DOCX to PDF
+$pdf = $service->docxToPdf('document.docx');
 
-// Convert PDF to DOCX
-$result = $conversionService->pdfToDocx('/path/to/document.pdf');
-$result->saveTo('/path/to/output.docx');
+// PDF to DOCX
+$docx = $service->pdfToDocx('input.pdf');
 
-// Convert image to PDF
-$result = $conversionService->imageToPdf('/path/to/image.jpg');
-$result->saveTo('/path/to/output.pdf');
+// Image to PDF
+$pdf = $service->imageToPdf('photo.jpg');
 ```
 
-### PDF Merging
+### PDF Merging & Splitting
 
 ```php
-// Get the merge service
-$mergeService = $client->merge();
+// Merging
+$client->merge()->combine(['file1.pdf', 'file2.pdf'])->saveTo('merged.pdf');
 
-// Merge multiple PDFs
-$result = $mergeService->combine([
-    '/path/to/document1.pdf',
-    '/path/to/document2.pdf',
-    '/path/to/document3.pdf'
+// Splitting
+$docs = $client->split()->split('input.pdf', [
+    'pageRanges' => [['start' => 1, 'end' => 2]]
+]);
+foreach ($docs as $i => $doc) {
+    $doc->saveTo("part_$i.pdf");
+}
+```
+
+### Page Manipulation
+
+Delete, rotate, reorder, insert, or replace pages.
+
+```php
+$service = $client->pageManipulation();
+$doc = $client->convert()->docxToPdf('input.docx'); // Get a Document object
+
+// Delete pages
+$service->deletePages($doc, [['start' => 1, 'end' => 1]])->saveTo('deleted.pdf');
+
+// Rotate pages (90, 180, 270)
+$service->rotatePages($doc, 90)->saveTo('rotated.pdf');
+
+// Insert pages from another doc
+$otherDoc = $client->createPdf()->fromHtml('<h1>New Page</h1>');
+$service->insertPages($doc, $otherDoc, atPage: 1)->saveTo('inserted.pdf');
+```
+
+### OCR Processing
+
+```php
+$client->ocr()->ocr('scanned.pdf', [
+    'ocrType' => 'searchable_image',
+    'ocrLang' => 'en-US'
+])->saveTo('searchable.pdf');
+```
+
+### PDF Compression
+
+```php
+$client->compress()->compress('large.pdf', ['compressionLevel' => 'MEDIUM'])->saveTo('small.pdf');
+```
+
+### Security
+
+```php
+$service = $client->secure();
+
+// Protect with password and permissions
+$service->protect('input.pdf', [
+    'password' => 'secret123',
+    'permissions' => ['PRINT_LOW_RES']
+])->saveTo('protected.pdf');
+
+// Unprotect
+$service->unprotect('protected.pdf', 'secret123')->saveTo('open.pdf');
+```
+
+### Linearize (Web Optimize)
+
+Optimize a PDF for fast web viewing (linearized PDF).
+
+```php
+$client->linearize()->linearize('large.pdf')->saveTo('web-optimized.pdf');
+```
+
+### Form Processing
+
+```php
+$service = $client->forms();
+
+// Fill form
+$service->fillForm('template.pdf', ['first_name' => 'John'])->saveTo('filled.pdf');
+
+// Export data (JSON)
+$data = $service->exportFormData($doc, 'json');
+```
+
+### PDF Extraction
+
+Extract text, tables, and images as structured data (ZIP output).
+
+```php
+// Extract text and tables
+$zip = $client->extract()->extract('document.pdf', ['text', 'tables']);
+$zip->saveTo('extracted_data.zip');
+
+// Extract text only
+$zip = $client->extract()->extract('document.pdf', ['text']);
+
+// Extract with table images and figures
+$zip = $client->extract()->extract('document.pdf', ['text'], [
+    'renditionsToExtract' => ['tables', 'figures']
 ]);
 
-$result->saveTo('/path/to/merged.pdf');
+// Extract tables as CSV
+$zip = $client->extract()->extract('document.pdf', ['tables'], [
+    'tableOutputFormat' => 'csv'
+]);
+```
+
+### PDF to Markdown
+
+Convert PDF to LLM-friendly Markdown (returns ZIP with `markdown.json`).
+
+```php
+$service = $client->markdown();
+
+// Basic conversion (returns ZIP with markdown.json)
+$service->toMarkdown('document.pdf')->saveTo('markdown_output.zip');
+
+// Include base64-encoded figures
+$service->toMarkdown('document.pdf', ['getFigures' => true])->saveTo('markdown_with_images.zip');
+```
+
+### PDF to Images
+
+Convert PDF pages to image files (JPEG, PNG, TIFF).
+
+```php
+$service = $client->images();
+
+// Convert to JPEG (default, returns ZIP)
+$service->toJpeg('document.pdf')->saveTo('images-jpeg.zip');
+
+// Convert to PNG
+$service->toPng('document.pdf')->saveTo('images-png.zip');
+
+// Convert to TIFF
+$service->toTiff('document.pdf')->saveTo('images-tiff.zip');
+
+// Or use the general method with custom options
+$service->toImages('document.pdf', 'jpeg', 'zipOfPageImages')->saveTo('output.zip');
+```
+
+### Accessibility
+
+```php
+$service = $client->accessibility();
+
+// Auto-tag for accessibility (returns [taggedPdf, report])
+[$taggedDoc, $report] = $service->autoTag('input.pdf', ['generateReport' => true]);
+$taggedDoc->saveTo('tagged.pdf');
+
+// Check accessibility (returns HTML report)
+$reportHtml = $service->check('input.pdf');
+$reportHtml->saveTo('accessibility_report.html');
+```
+
+### Document Generation
+
+Merge Word templates with dynamic data to create PDF or DOCX.
+
+```php
+$client->documentGeneration()->generate(
+    templatePath: 'invoice_template.docx',
+    jsonData: ['invoice_id' => '123', 'amount' => 50.00]
+)->saveTo('invoice.pdf');
+```
+
+### Watermarking
+
+Add a watermark to PDF pages using a source watermark PDF.
+
+```php
+$client->watermark()->addWatermark(
+    'document.pdf',
+    'watermark_source.pdf',
+    ['appearance' => ['opacity' => 50]]
+)->saveTo('watermarked.pdf');
+```
+
+### Metadata
+
+Read and update PDF metadata.
+
+```php
+$service = $client->metadata();
+
+// Get metadata
+$metadata = $service->getMetadata('document.pdf');
+echo $metadata['title'] ?? 'Unknown';
+
+// Update metadata
+$service->updateMetadata('document.pdf', [
+    'title' => 'New Title',
+    'author' => 'Jane Doe'
+])->saveTo('updated.pdf');
 ```
 
 ### Digital Signatures
 
-```php
-// Get the signature service
-$signatureService = $client->signature();
-
-// Add a signature field
-$result = $signatureService->addSignatureField('/path/to/document.pdf', [
-    'name' => 'signature_field_1',
-    'position' => ['x' => 100, 'y' => 100, 'width' => 200, 'height' => 50],
-    'page' => 1
-]);
-
-// Add a digital signature
-$result = $signatureService->addSignature('/path/to/document.pdf', [
-    'certificate_path' => '/path/to/certificate.p12',
-    'certificate_password' => 'password',
-    'signature_field' => 'signature_field_1',
-    'reason' => 'Document approval'
-]);
-
-$result->saveTo('/path/to/signed.pdf');
-```
-
-### PDF Comparison
+Apply digital signatures to PDF documents.
 
 ```php
-// Get the comparison service
-$comparisonService = $client->compare();
-
-// Compare two PDFs
-$result = $comparisonService->comparePdfs(
-    '/path/to/document_v1.pdf',
-    '/path/to/document_v2.pdf'
-);
-
-if (!$result->areIdentical()) {
-    echo "Found {$result->getDifferenceCount()} differences\n";
-
-    // Generate a visual diff report
-    $diffReport = $comparisonService->generateDiffReport(
-        '/path/to/document_v1.pdf',
-        '/path/to/document_v2.pdf',
-        '/path/to/diff_report.pdf'
-    );
-}
+$client->signature()->sign('document.pdf', [
+    'signatureFieldName' => 'Signature1',
+    'pageNumber' => 1,
+    'location' => ['top' => 400, 'left' => 50]
+])->saveTo('signed.pdf');
 ```
 
-## Configuration
+### Document Comparison
 
-### Environment Variables
-
-You can configure the client using environment variables:
-
-```bash
-export GRIM_REAPPER_PDF_SERVICES_API_KEY="your-api-key"
-export GRIM_REAPPER_PDF_SERVICES_CLIENT_ID="your-client-id"
-export GRIM_REAPPER_PDF_SERVICES_ORGANIZATION_ID="your-organization-id"
-export GRIM_REAPPER_PDF_SERVICES_ENVIRONMENT="production"
-```
-
-Then create the config from environment:
+Compare two PDF documents and highlight differences.
 
 ```php
-$config = PdfServicesConfig::fromEnvironment();
+$diff = $client->compare()->compare('original.pdf', 'modified.pdf');
+$diff->saveTo('comparison_result.pdf');
 ```
 
-### Custom HTTP Client
+### Annotations
 
-You can provide your own PSR-18 compatible HTTP client:
+Add and manage annotations on PDF documents.
 
 ```php
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Psr7\HttpFactory;
-
-$guzzleClient = new GuzzleClient();
-$requestFactory = new HttpFactory();
-$streamFactory = new HttpFactory();
-
-$config = new PdfServicesConfig('api-key', 'client-id', 'org-id');
-$config->setHttpClient($guzzleClient);
-$config->setRequestFactory($requestFactory);
-$config->setStreamFactory($streamFactory);
+$client->annotate()->addAnnotation('document.pdf', [
+    'type' => 'text',
+    'content' => 'This is an important note',
+    'pageNumber' => 1,
+    'position' => ['x' => 100, 'y' => 200]
+])->saveTo('annotated.pdf');
 ```
 
-## Error Handling
-
-The SDK provides specific exception types for different error conditions:
-
-```php
-use GrimReapper\PdfServices\Exceptions\AuthenticationException;
-use GrimReapper\PdfServices\Exceptions\ApiException;
-use GrimReapper\PdfServices\Exceptions\ValidationException;
-
-try {
-    $result = $client->convert()->docxToPdf('/path/to/document.docx');
-} catch (AuthenticationException $e) {
-    // Handle authentication errors
-    echo "Authentication failed: " . $e->getMessage();
-} catch (ValidationException $e) {
-    // Handle validation errors
-    echo "Validation error: " . $e->getMessage();
-} catch (ApiException $e) {
-    // Handle API errors
-    echo "API error: " . $e->getMessage();
-    echo "Request ID: " . $e->getRequestId();
-}
-```
-
-## Logging
-
-Add logging to your application for debugging and monitoring:
-
-```php
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
-
-$logger = new Logger('pdf-services');
-$logger->pushHandler(new StreamHandler('logs/pdf-services.log', Logger::DEBUG));
-
-// Set logger on services
-$client->convert()->setLogger($logger);
-$client->merge()->setLogger($logger);
-```
+---
 
 ## Advanced Usage
 
-### Asynchronous Operations
-
-Some operations support asynchronous processing for large files:
-
-```php
-// Start an asynchronous job
-$job = $conversionService->docxToPdfAsync('/path/to/large-document.docx');
-
-// Check job status
-while (!$job->isCompleted()) {
-    sleep(5); // Wait 5 seconds
-    $job = $conversionService->getJobStatus($job->getJobId());
-}
-
-// Get the result when complete
-if ($job->isCompleted()) {
-    $result = $conversionService->getJobResult($job->getJobId());
-    $result->saveTo('/path/to/output.pdf');
-}
-```
-
 ### Batch Processing
 
-Process multiple operations efficiently in batches:
+Execute multiple operations sequentially with a single call. Operations are saved to disk automatically when an `output` path is specified.
 
 ```php
-// Get the batch processor service
 $batchService = $client->batch();
 
-// Define batch operations
+// Define operations
 $operationDefs = [
-    [
-        'type' => 'convert',
-        'input' => 'input/document1.docx',
-        'output' => 'output/document1.pdf'
-    ],
-    [
-        'type' => 'convert',
-        'input' => 'input/document2.docx',
-        'output' => 'output/document2.pdf'
-    ],
-    [
-        'type' => 'merge',
-        'inputs' => ['output/document1.pdf', 'output/document2.pdf'],
-        'output' => 'output/merged.pdf'
-    ]
+    ['type' => 'convert', 'input' => 'doc1.docx', 'output' => 'doc1.pdf'],
+    ['type' => 'convert', 'input' => 'doc2.docx', 'output' => 'doc2.pdf'],
+    ['type' => 'compress', 'input' => 'large.pdf', 'output' => 'small.pdf', 'options' => ['compressionLevel' => 'MEDIUM']],
 ];
 
 // Create and execute batch
 $batch = $batchService->createBatchFromDefinitions($operationDefs);
-$completedBatch = $batchService->executeBatch($batch);
+$results = $batchService->executeBatch($batch);
 
-// Get results
-$results = $batchService->getBatchResults($completedBatch);
-foreach ($results as $operationId => $document) {
-    echo "Operation {$operationId} completed: {$document->getFilename()}\n";
+// Or use a single method call
+$batch = $batchService->createAndExecuteBatch($operationDefs);
+
+// Check results
+foreach ($results->getResults() as $operationId => $result) {
+    if ($result['status'] === 'completed') {
+        echo "{$operationId}: succeeded\n";
+    } else {
+        echo "{$operationId}: failed - {$result['error']}\n";
+    }
+}
+
+// Get Document objects for custom saving
+$documents = $batchService->getBatchResults($results);
+foreach ($documents as $operationId => $doc) {
+    $doc->saveTo("custom_{$operationId}.pdf");
 }
 ```
 
-### Advanced Batch Operations
+**Supported batch operation types:**
 
-Use BatchOperation objects for more control:
+| Type | Description | Required Fields |
+|------|-------------|-----------------|
+| `convert` | DOCX/XLSX/PPTX/image to PDF | `input`, `output` |
+| `compress` | Compress PDF | `input`, `output` |
+| `merge` | Combine multiple PDFs | `input[]` (array), `output` |
+| `ocr` | OCR a scanned PDF | `input`, `output` |
+| `export` | PDF to DOCX/XLSX/PPTX | `input`, `output` |
+| `linearize` | Web-optimize a PDF | `input`, `output` |
+| `protect` | Add password protection | `input`, `output` |
+| `split` | Split PDF into ranges | `input`, `output` |
+
+### Webhooks (Notifiers)
+
+You can configure webhooks to be notified when a job is done.
 
 ```php
-use GrimReapper\PdfServices\Models\BatchOperation;
-
-$operations = [
-    BatchOperation::createConversion(
-        'conv-1',
-        'input/report.docx',
-        'output/report.pdf',
-        'docx',
-        'pdf'
-    ),
-    BatchOperation::createMerge(
-        'merge-1',
-        ['output/file1.pdf', 'output/file2.pdf'],
-        'output/combined.pdf'
-    ),
-    BatchOperation::createOcr(
-        'ocr-1',
-        'input/scanned.pdf',
-        'output/searchable.pdf'
-    )
-];
-
-$batch = $batchService->createBatch($operations);
+$config->setNotifiers([
+    [
+        'type' => 'CALLBACK',
+        'url' => 'https://your-app.com/webhook-handler'
+    ]
+]);
 ```
 
-## API Reference
+## Error Handling
 
-For detailed API documentation, see the [API Reference](docs/api-reference.md).
+```php
+use GrimReapper\PdfServices\Exceptions\ApiException;
 
-## Examples
-
-See the [examples](examples/) directory for complete working examples of all features.
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+try {
+    $client->convert()->docxToPdf('missing.docx');
+} catch (ApiException $e) {
+    echo "Error: " . $e->getMessage();
+    echo "Status Code: " . $e->getCode();
+    echo "Request ID: " . $e->getRequestId();
+}
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support and questions:
-
-- [Adobe PDF Services Documentation](https://developer.adobe.com/document-services/docs/overview/)
-- [GitHub Issues](https://github.com/grim-reapper/pdf-services-php/issues)
-- [Adobe Developer Forums](https://community.adobe.com/t5/document-services-apis/bd-p/DocumentServices-APIs)
+MIT

@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace GrimReapper\PdfServices;
 
 use GrimReapper\PdfServices\Config\PdfServicesConfig;
+use GrimReapper\PdfServices\Http\HttpClient;
+use GrimReapper\PdfServices\Services\AuthService;
 use GrimReapper\PdfServices\Services\PdfCreationService;
 use GrimReapper\PdfServices\Services\PdfConversionService;
 use GrimReapper\PdfServices\Services\PdfMergeService;
 use GrimReapper\PdfServices\Services\PdfSplitService;
+use GrimReapper\PdfServices\Services\PageManipulationService;
 use GrimReapper\PdfServices\Services\OcrService;
 use GrimReapper\PdfServices\Services\CompressionService;
 use GrimReapper\PdfServices\Services\SecurityService;
@@ -18,6 +21,13 @@ use GrimReapper\PdfServices\Services\MetadataService;
 use GrimReapper\PdfServices\Services\SignatureService;
 use GrimReapper\PdfServices\Services\ComparisonService;
 use GrimReapper\PdfServices\Services\BatchProcessorService;
+use GrimReapper\PdfServices\Services\WatermarkService;
+use GrimReapper\PdfServices\Services\AccessibilityService;
+use GrimReapper\PdfServices\Services\MarkdownService;
+use GrimReapper\PdfServices\Services\PdfToImagesService;
+use GrimReapper\PdfServices\Services\LinearizeService;
+use GrimReapper\PdfServices\Services\DocumentGenerationService;
+use GrimReapper\PdfServices\Services\ExtractService;
 use GrimReapper\Contracts\PdfServicesInterface;
 
 /**
@@ -29,6 +39,9 @@ use GrimReapper\Contracts\PdfServicesInterface;
 class Client implements PdfServicesInterface
 {
     private PdfServicesConfig $config;
+    private HttpClient $httpClient;
+    private AuthService $authService;
+    private array $services = [];
 
     /**
      * Create a new PDF Services client
@@ -38,6 +51,34 @@ class Client implements PdfServicesInterface
     public function __construct(PdfServicesConfig $config)
     {
         $this->config = $config;
+        $this->httpClient = new HttpClient($config);
+        $this->authService = new AuthService($config);
+        $this->httpClient->setAuthService($this->authService);
+    }
+
+    /**
+     * Get the page manipulation service
+     *
+     * @return PageManipulationService
+     */
+    public function pageManipulation(): PageManipulationService
+    {
+        return $this->getService(PageManipulationService::class);
+    }
+
+    /**
+     * Get a service instance (lazy loaded)
+     *
+     * @param string $class The service class name
+     * @return mixed The service instance
+     */
+    private function getService(string $class): mixed
+    {
+        if (!isset($this->services[$class])) {
+            $this->services[$class] = new $class($this->config, $this->httpClient);
+        }
+
+        return $this->services[$class];
     }
 
     /**
@@ -47,7 +88,7 @@ class Client implements PdfServicesInterface
      */
     public function createPdf(): PdfCreationService
     {
-        return new PdfCreationService($this->config);
+        return $this->getService(PdfCreationService::class);
     }
 
     /**
@@ -57,7 +98,7 @@ class Client implements PdfServicesInterface
      */
     public function convert(): PdfConversionService
     {
-        return new PdfConversionService($this->config);
+        return $this->getService(PdfConversionService::class);
     }
 
     /**
@@ -67,7 +108,7 @@ class Client implements PdfServicesInterface
      */
     public function merge(): PdfMergeService
     {
-        return new PdfMergeService($this->config);
+        return $this->getService(PdfMergeService::class);
     }
 
     /**
@@ -77,7 +118,7 @@ class Client implements PdfServicesInterface
      */
     public function split(): PdfSplitService
     {
-        return new PdfSplitService($this->config);
+        return $this->getService(PdfSplitService::class);
     }
 
     /**
@@ -87,7 +128,7 @@ class Client implements PdfServicesInterface
      */
     public function ocr(): OcrService
     {
-        return new OcrService($this->config);
+        return $this->getService(OcrService::class);
     }
 
     /**
@@ -97,7 +138,7 @@ class Client implements PdfServicesInterface
      */
     public function compress(): CompressionService
     {
-        return new CompressionService($this->config);
+        return $this->getService(CompressionService::class);
     }
 
     /**
@@ -107,7 +148,7 @@ class Client implements PdfServicesInterface
      */
     public function secure(): SecurityService
     {
-        return new SecurityService($this->config);
+        return $this->getService(SecurityService::class);
     }
 
     /**
@@ -117,7 +158,7 @@ class Client implements PdfServicesInterface
      */
     public function annotate(): AnnotationService
     {
-        return new AnnotationService($this->config);
+        return $this->getService(AnnotationService::class);
     }
 
     /**
@@ -125,9 +166,79 @@ class Client implements PdfServicesInterface
      *
      * @return FormService
      */
-    public function extract(): FormService
+    public function forms(): FormService
     {
-        return new FormService($this->config);
+        return $this->getService(FormService::class);
+    }
+
+    /**
+     * Get the extraction service
+     *
+     * @return ExtractService
+     */
+    public function extract(): ExtractService
+    {
+        return $this->getService(ExtractService::class);
+    }
+
+    /**
+     * Get the watermark service
+     *
+     * @return WatermarkService
+     */
+    public function watermark(): WatermarkService
+    {
+        return $this->getService(WatermarkService::class);
+    }
+
+    /**
+     * Get the accessibility service
+     *
+     * @return AccessibilityService
+     */
+    public function accessibility(): AccessibilityService
+    {
+        return $this->getService(AccessibilityService::class);
+    }
+
+    /**
+     * Get the PDF to markdown service
+     *
+     * @return MarkdownService
+     */
+    public function markdown(): MarkdownService
+    {
+        return $this->getService(MarkdownService::class);
+    }
+
+    /**
+     * Get the PDF to images service
+     *
+     * @return PdfToImagesService
+     */
+    public function images(): PdfToImagesService
+    {
+        return $this->getService(PdfToImagesService::class);
+    }
+
+    /**
+     * Get the linearization service
+     *
+     * @return LinearizeService
+     */
+    public function linearize(): LinearizeService
+    {
+        return $this->getService(LinearizeService::class);
+    }
+
+    /**
+     * Get the document generation service
+     *
+     * @return DocumentGenerationService
+     */
+    public function documentGeneration(): DocumentGenerationService
+    {
+        return $this->getService(DocumentGenerationService::class);
     }
 
     /**
@@ -137,7 +248,7 @@ class Client implements PdfServicesInterface
      */
     public function metadata(): MetadataService
     {
-        return new MetadataService($this->config);
+        return $this->getService(MetadataService::class);
     }
 
     /**
@@ -147,7 +258,7 @@ class Client implements PdfServicesInterface
      */
     public function signature(): SignatureService
     {
-        return new SignatureService($this->config);
+        return $this->getService(SignatureService::class);
     }
 
     /**
@@ -157,7 +268,7 @@ class Client implements PdfServicesInterface
      */
     public function compare(): ComparisonService
     {
-        return new ComparisonService($this->config);
+        return $this->getService(ComparisonService::class);
     }
 
     /**
@@ -167,7 +278,7 @@ class Client implements PdfServicesInterface
      */
     public function batch(): BatchProcessorService
     {
-        return new BatchProcessorService($this->config);
+        return $this->getService(BatchProcessorService::class);
     }
 
     /**

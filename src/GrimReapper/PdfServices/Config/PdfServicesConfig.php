@@ -16,49 +16,40 @@ use Psr\Http\Message\StreamFactoryInterface;
  */
 class PdfServicesConfig
 {
-    private string $apiKey;
     private string $clientId;
+    private string $clientSecret;
     private string $organizationId;
-    private string $environment;
+    private string $region;
     private ?ClientInterface $httpClient;
     private ?RequestFactoryInterface $requestFactory;
     private ?StreamFactoryInterface $streamFactory;
     private array $httpOptions;
+    private array $notifiers = [];
 
     /**
      * Create a new PDF Services configuration
      *
-     * @param string $apiKey Adobe PDF Services API key
      * @param string $clientId Adobe client ID
+     * @param string $clientSecret Adobe client secret
      * @param string $organizationId Adobe organization ID
-     * @param string $environment API environment ('production' or 'staging')
+     * @param string $region API region ('us' or 'eu')
      * @param array $httpOptions Additional HTTP client options
      */
     public function __construct(
-        string $apiKey,
         string $clientId,
+        string $clientSecret,
         string $organizationId,
-        string $environment = 'production',
+        string $region = 'us',
         array $httpOptions = []
     ) {
-        $this->apiKey = $apiKey;
         $this->clientId = $clientId;
+        $this->clientSecret = $clientSecret;
         $this->organizationId = $organizationId;
-        $this->environment = $environment;
+        $this->region = strtolower($region);
         $this->httpOptions = $httpOptions;
         $this->httpClient = null;
         $this->requestFactory = null;
         $this->streamFactory = null;
-    }
-
-    /**
-     * Get the API key
-     *
-     * @return string
-     */
-    public function getApiKey(): string
-    {
-        return $this->apiKey;
     }
 
     /**
@@ -72,6 +63,16 @@ class PdfServicesConfig
     }
 
     /**
+     * Get the client secret
+     *
+     * @return string
+     */
+    public function getClientSecret(): string
+    {
+        return $this->clientSecret;
+    }
+
+    /**
      * Get the organization ID
      *
      * @return string
@@ -82,13 +83,13 @@ class PdfServicesConfig
     }
 
     /**
-     * Get the API environment
+     * Get the API region
      *
      * @return string
      */
-    public function getEnvironment(): string
+    public function getRegion(): string
     {
-        return $this->environment;
+        return $this->region;
     }
 
     /**
@@ -98,8 +99,8 @@ class PdfServicesConfig
      */
     public function getBaseUrl(): string
     {
-        return $this->environment === 'production'
-            ? 'https://pdf-services.adobe.io'
+        return $this->region === 'eu'
+            ? 'https://pdf-services-ew1.adobe.io'
             : 'https://pdf-services-ue1.adobe.io';
     }
 
@@ -192,6 +193,28 @@ class PdfServicesConfig
     }
 
     /**
+     * Set notifiers for job completion
+     *
+     * @param array $notifiers
+     * @return self
+     */
+    public function setNotifiers(array $notifiers): self
+    {
+        $this->notifiers = $notifiers;
+        return $this;
+    }
+
+    /**
+     * Get notifiers
+     *
+     * @return array
+     */
+    public function getNotifiers(): array
+    {
+        return $this->notifiers;
+    }
+
+    /**
      * Create configuration from environment variables
      *
      * @return self
@@ -199,10 +222,10 @@ class PdfServicesConfig
     public static function fromEnvironment(): self
     {
         return new self(
-            getenv('GRIM_REAPPER_PDF_SERVICES_API_KEY') ?: '',
             getenv('GRIM_REAPPER_PDF_SERVICES_CLIENT_ID') ?: '',
+            getenv('GRIM_REAPPER_PDF_SERVICES_CLIENT_SECRET') ?: '',
             getenv('GRIM_REAPPER_PDF_SERVICES_ORGANIZATION_ID') ?: '',
-            getenv('GRIM_REAPPER_PDF_SERVICES_ENVIRONMENT') ?: 'production'
+            getenv('GRIM_REAPPER_PDF_SERVICES_REGION') ?: 'us'
         );
     }
 }

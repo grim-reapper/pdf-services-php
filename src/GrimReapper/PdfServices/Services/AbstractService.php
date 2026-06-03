@@ -25,11 +25,12 @@ abstract class AbstractService implements ServiceInterface
      * Create a new service instance
      *
      * @param PdfServicesConfig $config The PDF services configuration
+     * @param HttpClient|null $httpClient Optional HTTP client (shared)
      */
-    public function __construct(PdfServicesConfig $config)
+    public function __construct(PdfServicesConfig $config, ?HttpClient $httpClient = null)
     {
         $this->config = $config;
-        $this->httpClient = new HttpClient($config);
+        $this->httpClient = $httpClient ?? new HttpClient($config);
         $this->logger = null;
     }
 
@@ -129,7 +130,8 @@ abstract class AbstractService implements ServiceInterface
             $this->log('error', 'API request failed', [
                 'service' => $this->getServiceName(),
                 'endpoint' => $endpoint,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'details' => $e->getDetails()
             ]);
             throw $e;
         } catch (PdfServicesException $e) {
@@ -182,5 +184,117 @@ abstract class AbstractService implements ServiceInterface
         if (!is_file($filePath)) {
             throw new \InvalidArgumentException("Path is not a file: {$filePath}");
         }
+    }
+
+    /**
+     * Upload an asset to Adobe PDF Services
+     *
+     * @param string $content The file content
+     * @param string $mediaType The media type
+     * @return array The asset details
+     */
+    protected function uploadAsset(string $content, string $mediaType): array
+    {
+        $response = $this->makeRequest('POST', '/assets', ['mediaType' => $mediaType]);
+
+        $this->httpClient->request('PUT', $response['uploadUri'], $content, [
+            'Content-Type' => $mediaType
+        ], true);
+
+        return $response;
+    }
+
+    /**
+     * Poll for job completion
+     *
+     * @param string $location The job location URL
+     * @param int $maxWaitTime Maximum wait time in seconds
+     * @return array The job result
+     */
+    protected function pollJob(string $location, int $maxWaitTime = 300): array
+    {
+        $startTime = time();
+        while (time() - $startTime < $maxWaitTime) {
+            $response = $this->httpClient->request('GET', $location, [], [], true);
+
+            $status = $response['status'] ?? ($response['result']['status'] ?? '');
+
+            if ($status === 'done' || $status === 'completed') {
+                return $response;
+            }
+
+            if ($status === 'failed') {
+                $error = $response['error'] ?? ($response['result']['error'] ?? 'Unknown error');
+                throw PdfServicesException::fromApiError($error, 400);
+            }
+
+            sleep(2);
+        }
+
+        throw new ApiException('Job timed out', 408);
+    }
+
+    /**
+     * Get data from the response, handling different response structures
+     *
+     * @param array $response The API response
+     * @param string|array $key The data key or array of keys to try
+     * @param bool $silent Whether to suppress logging on failure
+     * @return mixed The data
+     * @throws \RuntimeException If the key is not found
+     */
+    protected function getResultData(array $response, $key, bool $silent = false): mixed
+    {
+        $keys = (array)$key;
+
+        // Add common synonyms to the search keys
+        if (in_array('assets', $keys) && !in_array('assetList', $keys)) $keys[] = 'assetList';
+        if (in_array('pdfProperties', $keys) && !in_array('metadata', $keys)) $keys[] = 'metadata';
+
+        // 1. Check direct keys at top level (prioritize provided keys)
+        foreach ($keys as $k) {
+            if (isset($response[$k])) {
+                return $response[$k];
+            }
+        }
+
+        // 2. Try nested under 'result' (v1 and some v2 behavior)
+        if (isset($response['result']) && is_array($response['result'])) {
+            foreach ($keys as $k) {
+                // Check direct key under result
+                if (isset($response['result'][$k])) {
+                    return $response['result'][$k];
+                }
+
+                // If we are looking for 'asset' but it's under 'content' (common mapping)
+                if ($k === 'asset' && isset($response['result']['content'])) {
+                    return $response['result']['content'];
+                }
+            }
+
+            // If result contains only ONE key, and it's one of the known result types
+            $resultKeys = ['asset', 'assets', 'assetList', 'content', 'pdfProperties', 'metadata', 'diffReport', 'annotations'];
+            if (count($response['result']) === 1) {
+                $onlyKey = (string)key($response['result']);
+                if (in_array($onlyKey, $resultKeys)) {
+                    return $response['result'][$onlyKey];
+                }
+            }
+        }
+
+        if (!$silent) {
+            $this->log('error', "Missing expected keys in API response", [
+                'expected_keys' => $keys,
+                'available_keys' => array_keys($response),
+                'response' => $response
+            ]);
+        }
+
+        $availableKeys = array_keys($response);
+        if (isset($response['result']) && is_array($response['result'])) {
+            $availableKeys = array_merge($availableKeys, array_map(fn($k) => "result.{$k}", array_keys($response['result'])));
+        }
+
+        throw new \RuntimeException("Missing one of these keys: '" . implode(', ', $keys) . "' in API response. Available keys: " . implode(', ', $availableKeys));
     }
 }
