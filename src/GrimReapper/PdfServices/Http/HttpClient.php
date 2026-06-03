@@ -329,7 +329,17 @@ class HttpClient
         }
 
         if ($statusCode >= 400) {
-            $this->log('error', "API error response: {$responseBody}");
+            $this->log('error', "API error response", [
+                'status' => $statusCode,
+                'body' => $responseBody
+            ]);
+
+            // Re-throw with more detail if it's a 400 error to help debugging
+            if ($statusCode === 400) {
+                $message = "Invalid request format (400). Response: " . $responseBody;
+                throw new ApiException($message, $statusCode, $errorData);
+            }
+
             throw ApiException::fromApiError($errorData, $statusCode);
         }
 

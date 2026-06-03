@@ -39,10 +39,10 @@ class SecurityService extends AbstractService
             $protection['userPassword'] = $options['password'];
         }
 
-        // Adobe requires ownerPassword to be set for permissions to work
         if (isset($options['ownerPassword'])) {
             $protection['ownerPassword'] = $options['ownerPassword'];
         } elseif (!empty($options['permissions']) && isset($options['password'])) {
+            // Adobe requires an owner password to enforce permissions
             $protection['ownerPassword'] = $options['password'];
         }
 

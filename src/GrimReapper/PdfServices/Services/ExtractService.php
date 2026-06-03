@@ -48,7 +48,7 @@ class ExtractService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/extractpdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
 
-        $assetData = $this->getResultData($jobResult, ['content', 'asset']);
+        $assetData = $this->getResultData($jobResult, ['content', 'asset', 'resource']);
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(

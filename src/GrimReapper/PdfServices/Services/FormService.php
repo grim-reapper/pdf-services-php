@@ -39,7 +39,7 @@ class FormService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/extractpdf', $data);
         $jobResult = $this->pollJob($response['location']);
-        $contentData = $this->getResultData($jobResult, 'content');
+        $contentData = $this->getResultData($jobResult, ['content', 'asset', 'resource']);
         $resultContent = $this->httpClient->download($contentData['downloadUri']);
 
         return json_decode($resultContent, true);
@@ -94,7 +94,7 @@ class FormService extends AbstractService
 
         $response = $this->makeRequest('POST', '/operation/exportpdfformdata', $requestData);
         $jobResult = $this->pollJob($response['location']);
-        $contentData = $this->getResultData($jobResult, 'content');
+        $contentData = $this->getResultData($jobResult, ['content', 'asset', 'resource']);
         $resultContent = $this->httpClient->download($contentData['downloadUri']);
 
         if ($format === 'json') {
