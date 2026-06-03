@@ -35,15 +35,17 @@ class SecurityService extends AbstractService
         $asset = $this->uploadAsset($content, 'application/pdf');
 
         $protection = [];
-        if (isset($options['password'])) {
-            $protection['userPassword'] = $options['password'];
-        }
 
         if (isset($options['ownerPassword'])) {
+            // Explicit owner password provided
             $protection['ownerPassword'] = $options['ownerPassword'];
         } elseif (!empty($options['permissions']) && isset($options['password'])) {
-            // Adobe requires an owner password to enforce permissions
+            // When permissions are set, use password as ownerPassword only
+            // (Adobe API requires different user/owner passwords)
             $protection['ownerPassword'] = $options['password'];
+        } elseif (isset($options['password'])) {
+            // No permissions — use password as userPassword to open the PDF
+            $protection['userPassword'] = $options['password'];
         }
 
         // Map permission enums to Adobe API v2 expected values
@@ -65,15 +67,17 @@ class SecurityService extends AbstractService
             $mappedPermissions[] = $permissionMap[strtoupper((string)$perm)] ?? $perm;
         }
 
-        if (!empty($mappedPermissions)) {
-            $protection['permissions'] = $mappedPermissions;
-        }
-
         $data = [
             'assetID' => $asset['assetID'],
             'passwordProtection' => $protection,
-            'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256'
+            'encryptionAlgorithm' => $options['encryptionAlgorithm'] ?? 'AES_256',
+            'contentToEncrypt' => $options['contentToEncrypt'] ?? 'ALL_CONTENT',
         ];
+
+        // permissions is a top-level field, NOT inside passwordProtection
+        if (!empty($mappedPermissions)) {
+            $data['permissions'] = $mappedPermissions;
+        }
 
         $response = $this->makeRequest('POST', '/operation/protectpdf', $data);
         $jobResult = $this->pollJob($response['location']);

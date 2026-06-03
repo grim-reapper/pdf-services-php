@@ -178,17 +178,27 @@ class HttpClient
      * @param string $url The URL to download from
      * @return string The file content
      */
-    public function download(string $url): string
+    public function download(string $url, array $headers = []): string
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-        curl_setopt($ch, CURLOPT_ENCODING, ''); // Handle compressed transfer automatically
+        // Do NOT set CURLOPT_ENCODING for binary downloads — automatic
+        // decompression can corrupt ZIP and other binary file content.
+
+        if (!empty($headers)) {
+            $formattedHeaders = [];
+            foreach ($headers as $name => $value) {
+                $formattedHeaders[] = "{$name}: {$value}";
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $formattedHeaders);
+        }
 
         $content = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 
         if ($content === false) {
             $error = curl_error($ch);
@@ -262,7 +272,7 @@ class HttpClient
 
         // Capture headers via a callback for more reliability
         $responseHeaders = [];
-        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$responseHeaders) {
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($curl, $header) use (&$responseHeaders) {
             $len = strlen($header);
             $parts = explode(':', $header, 2);
             if (count($parts) >= 2) {
@@ -337,7 +347,7 @@ class HttpClient
             // Re-throw with more detail if it's a 400 error to help debugging
             if ($statusCode === 400) {
                 $message = "Invalid request format (400). Response: " . $responseBody;
-                throw new ApiException($message, $statusCode, $errorData);
+                throw new ApiException($message, $statusCode, null, $errorData);
             }
 
             throw ApiException::fromApiError($errorData, $statusCode);

@@ -24,6 +24,7 @@ use GrimReapper\PdfServices\Services\BatchProcessorService;
 use GrimReapper\PdfServices\Services\WatermarkService;
 use GrimReapper\PdfServices\Services\AccessibilityService;
 use GrimReapper\PdfServices\Services\MarkdownService;
+use GrimReapper\PdfServices\Services\PdfToImagesService;
 use GrimReapper\PdfServices\Services\LinearizeService;
 use GrimReapper\PdfServices\Services\DocumentGenerationService;
 use GrimReapper\PdfServices\Services\ExtractService;
@@ -201,13 +202,23 @@ class Client implements PdfServicesInterface
     }
 
     /**
-     * Get the markdown service
+     * Get the PDF to markdown service
      *
      * @return MarkdownService
      */
     public function markdown(): MarkdownService
     {
         return $this->getService(MarkdownService::class);
+    }
+
+    /**
+     * Get the PDF to images service
+     *
+     * @return PdfToImagesService
+     */
+    public function images(): PdfToImagesService
+    {
+        return $this->getService(PdfToImagesService::class);
     }
 
     /**

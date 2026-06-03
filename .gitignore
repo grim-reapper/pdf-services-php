@@ -61,7 +61,6 @@ docs/.vitepress/dist/
 *.rej
 
 # Custom vendor config
-config/
 data/
 
 # Debug dumps

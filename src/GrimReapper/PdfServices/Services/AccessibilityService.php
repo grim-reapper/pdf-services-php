@@ -44,7 +44,8 @@ class AccessibilityService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/autotag', $requestData);
         $jobResult = $this->pollJob($response['location']);
 
-        $taggedAssetData = $this->getResultData($jobResult, 'asset');
+        // API returns 'tagged-pdf' key (not 'asset') for the tagged PDF
+        $taggedAssetData = $this->getResultData($jobResult, ['tagged-pdf', 'asset']);
         $taggedContent = $this->httpClient->download($taggedAssetData['downloadUri']);
 
         $taggedDoc = new Document(
@@ -55,8 +56,11 @@ class AccessibilityService extends AbstractService
         );
 
         $reportDoc = null;
-        if (isset($jobResult['report'])) {
-            $reportContent = $this->httpClient->download($jobResult['report']['downloadUri']);
+        // Report may be at top level or nested under 'result'
+        $reportData = $jobResult['report']
+            ?? ($jobResult['result']['report'] ?? null);
+        if ($reportData && isset($reportData['downloadUri'])) {
+            $reportContent = $this->httpClient->download($reportData['downloadUri']);
             $reportDoc = new Document(
                 $reportContent,
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -91,7 +95,8 @@ class AccessibilityService extends AbstractService
         $response = $this->makeRequest('POST', '/operation/pdfaccessibilitychecker', $requestData);
         $jobResult = $this->pollJob($response['location']);
 
-        $assetData = $this->getResultData($jobResult, 'asset');
+        // Accessibility checker may return asset under different keys
+        $assetData = $this->getResultData($jobResult, ['asset', 'report', 'content']);
         $resultContent = $this->httpClient->download($assetData['downloadUri']);
 
         return new Document(

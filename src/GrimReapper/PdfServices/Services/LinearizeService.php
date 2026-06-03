@@ -37,7 +37,7 @@ class LinearizeService extends AbstractService
             'assetID' => $asset['assetID'],
         ];
 
-        $response = $this->makeRequest('POST', '/operation/linearize', $requestData);
+        $response = $this->makeRequest('POST', '/operation/linearizepdf', $requestData);
         $jobResult = $this->pollJob($response['location']);
 
         $assetData = $this->getResultData($jobResult, 'asset');
